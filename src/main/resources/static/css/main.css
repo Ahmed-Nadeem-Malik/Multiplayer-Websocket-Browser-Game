@@ -1,0 +1,22 @@
+body {
+    background-color: #1c3551
+}
+
+#h1 {
+    color: white;
+    text-align: center;
+}
+
+#main {
+    outline-color: white;
+    color: white;
+}
+
+.container {
+    outline: 2px solid white;
+    width: 50%;
+    margin: auto;
+    border: white;
+}
+
+
