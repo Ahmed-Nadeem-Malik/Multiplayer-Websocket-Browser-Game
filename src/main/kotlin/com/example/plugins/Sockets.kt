@@ -35,11 +35,13 @@ fun Application.configureSockets() {
         webSocket("/movement") {
             val player = Player()
             PlayerStore.setPlayer(player)
+            SessionStore.addSession(player.id, this)
+
             val initPlayerMsg = json.encodeToString(InitPlayer(type = "InitPlayer", player))
             val initPlayersMsg =
                 json.encodeToString(InitPlayers(type = "InitPlayers", players = PlayerStore.getPlayers()))
             send(Frame.Text(initPlayerMsg))
-            //send(Frame.Text(initPlayersMsg))
+            send(Frame.Text(initPlayersMsg))
 
             try {
                 for (frame in incoming) {
@@ -52,14 +54,23 @@ fun Application.configureSockets() {
                         continue
                     }
 
-                    application.log.warn("This is a movement $movement")
                     player.update(movement)
-
+                    val updatePlayersMsg =
+                        json.encodeToString(InitPlayers(type = "InitPlayers", players = PlayerStore.getPlayers()))
+                    for (session in SessionStore.getSessions()) {
+                        session.send(Frame.Text(updatePlayersMsg))
+                    }
                 }
             } catch (e: Throwable) {
                 application.log.warn("Unknown Error", e)
             } finally {
-                // TODO: clean up resources
+                SessionStore.removeSession(player.id)
+                PlayerStore.removePlayer(player.id)
+                val updatePlayersMsg =
+                    json.encodeToString(InitPlayers(type = "InitPlayers", players = PlayerStore.getPlayers()))
+                for (session in SessionStore.getSessions()) {
+                    session.send(Frame.Text(updatePlayersMsg))
+                }
             }
         }
     }

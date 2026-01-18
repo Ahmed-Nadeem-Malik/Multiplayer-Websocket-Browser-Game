@@ -7,11 +7,12 @@ export function isMovementKey(k) {
 /**
  * Starts the requestAnimationFrame loop for updates and rendering.
  */
-export function startGameLoop(player, inputState, ctx, canvas) {
+export function startGameLoop(player, players, inputState, ctx, canvas) {
     const loop = () => {
-        player.update(inputState);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        player.draw();
+        for (const currentPlayer of Object.values(players.getPlayers())) {
+            currentPlayer.draw();
+        }
         requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);

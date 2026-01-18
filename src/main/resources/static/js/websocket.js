@@ -31,20 +31,14 @@ export function connectWebSocket() {
      */
     webSocket.addEventListener("message", (e) => {
         const msg = JSON.parse(e.data);
-        console.log(msg);
-        console.log("_______________________");
         switch (msg.type) {
             case "InitPlayer":
                 player.hydrate(msg.player);
-                player.printPlayer();
                 break;
             case "InitPlayers":
-            /*
-             players.setPlayers(msg.body);
-             players.printPlayers();
-             break;
-
-             */
+                players.hydrate(msg.players);
+                console.log(players);
+                break;
         }
     });
     /**
@@ -68,7 +62,12 @@ export function connectWebSocket() {
 export function sendInputState() {
     if (!webSocket || webSocket.readyState !== WebSocket.OPEN)
         return;
+    const id = player.getId();
+    if (!id)
+        return;
     webSocket.send(JSON.stringify({
-        type: "input", ...inputState,
+        type: "input",
+        id,
+        ...inputState,
     }));
 }

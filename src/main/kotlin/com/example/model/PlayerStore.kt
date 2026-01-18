@@ -10,6 +10,10 @@ object PlayerStore {
     fun setPlayer(player: Player) {
         players[player.id] = player
     }
+
+    fun removePlayer(id: String) {
+        players.remove(id)
+    }
 }
 
 

@@ -1,4 +1,4 @@
-import {inputState, Player, Players} from "./game.js";
+import {InputState, inputState, Player, PlayerDTO, Players} from "./game.js";
 
 /**
  * WebSocket endpoint for movement messages.
@@ -39,20 +39,14 @@ export function connectWebSocket(): void {
      */
     webSocket.addEventListener("message", (e: MessageEvent) => {
         const msg = JSON.parse(e.data as string) as InitMsg;
-        console.log(msg);
-        console.log("_______________________");
         switch (msg.type) {
             case "InitPlayer":
                 player.hydrate(msg.player);
-                player.printPlayer();
                 break;
             case "InitPlayers":
-            /*
-             players.setPlayers(msg.body);
-             players.printPlayers();
-             break;
-
-             */
+                players.hydrate(msg.players);
+                console.log(players);
+                break;
         }
     });
 
@@ -79,8 +73,13 @@ export function connectWebSocket(): void {
 export function sendInputState(): void {
     if (!webSocket || webSocket.readyState !== WebSocket.OPEN) return;
 
+    const id = player.getId();
+    if (!id) return;
+
     webSocket.send(JSON.stringify({
-        type: "input", ...inputState,
+        type: "input",
+        id,
+        ...inputState,
     }));
 }
 
@@ -90,12 +89,5 @@ export function sendInputState(): void {
 type InitMsg =
     | { type: "InitPlayer"; player: PlayerDTO }
     | { type: "InitPlayers"; players: Record<string, PlayerDTO> };
-
-export type PlayerDTO = {
-    id: string;
-    x: number;
-    y: number;
-    speed: number;
-}
 
 

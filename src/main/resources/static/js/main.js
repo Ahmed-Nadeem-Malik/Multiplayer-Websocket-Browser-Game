@@ -1,7 +1,7 @@
 /**
  * Entry point that wires input handling and the game loop.
  */
-import { connectWebSocket, player, sendInputState } from "./websocket.js";
+import { connectWebSocket, player, players, sendInputState } from "./websocket.js";
 import { canvas, ctx, inputState } from "./game.js";
 import { isMovementKey, startGameLoop } from "./utils.js";
 /**
@@ -29,4 +29,5 @@ document.addEventListener("keyup", (e) => {
     }
 });
 connectWebSocket();
-startGameLoop(player, inputState, ctx, canvas);
+setInterval(sendInputState, 1);
+startGameLoop(player, players, inputState, ctx, canvas);

@@ -30,6 +30,12 @@ export class Player {
         this.id = id;
     }
     /**
+     * Returns the current player id.
+     */
+    getId() {
+        return this.id;
+    }
+    /**
      * Updates player position based on input.
      */
     update(input) {
@@ -50,18 +56,21 @@ export class Player {
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.stroke();
     }
-    printPlayer() {
-        console.log("The player has an id" + this.id);
-    }
 }
 export class Players {
     constructor() {
         this.hashMap = {};
     }
-    setPlayers(jsonData) {
-        this.hashMap = jsonData;
+    getPlayers() {
+        return this.hashMap;
     }
-    printPlayers() {
-        console.log(this.hashMap);
+    hydrate(jsonData) {
+        const next = {};
+        for (const [id, dto] of Object.entries(jsonData)) {
+            const player = new Player();
+            player.hydrate(dto);
+            next[id] = player;
+        }
+        this.hashMap = next;
     }
 }

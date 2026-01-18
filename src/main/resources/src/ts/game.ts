@@ -1,5 +1,3 @@
-import {PlayerDTO} from "./websocket";
-
 /**
  * Represents the current input state for movement keys.
  */
@@ -8,6 +6,16 @@ export type InputState = {
     a: boolean;
     s: boolean;
     d: boolean;
+};
+
+/**
+ * Serializable data shape for player state.
+ */
+export type PlayerDTO = {
+    id: string;
+    x: number;
+    y: number;
+    speed: number;
 };
 
 /**
@@ -47,6 +55,13 @@ export class Player {
     }
 
     /**
+     * Returns the current player id.
+     */
+    public getId(): String | undefined {
+        return this.id;
+    }
+
+    /**
      * Updates player position based on input.
      */
     public update(input: InputState): void {
@@ -64,20 +79,22 @@ export class Player {
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.stroke();
     }
-
-    public printPlayer(): void {
-        console.log("The player has an id" + this.id)
-    }
 }
 
 export class Players {
     private hashMap: Record<string, Player> = {};
 
-    public setPlayers(jsonData: Record<string, Player>) {
-        this.hashMap = jsonData;
+    public getPlayers() {
+        return this.hashMap;
     }
 
-    public printPlayers() {
-        console.log(this.hashMap);
+    public hydrate(jsonData: Record<string, PlayerDTO>) {
+        const next: Record<string, Player> = {};
+        for (const [id, dto] of Object.entries(jsonData)) {
+            const player = new Player();
+            player.hydrate(dto);
+            next[id] = player;
+        }
+        this.hashMap = next;
     }
 }
