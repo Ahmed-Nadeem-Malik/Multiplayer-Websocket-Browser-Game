@@ -1,6 +1,6 @@
 package com.example.model
 
-import io.ktor.server.websocket.DefaultWebSocketServerSession
+import io.ktor.server.websocket.*
 import java.util.concurrent.ConcurrentHashMap
 
 object SessionStore {

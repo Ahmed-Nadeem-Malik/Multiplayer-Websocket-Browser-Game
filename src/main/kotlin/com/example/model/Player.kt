@@ -1,8 +1,7 @@
 package com.example.model
 
 import kotlinx.serialization.Serializable
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
+import java.util.*
 
 @Serializable
 data class Player(val id: String = UUID.randomUUID().toString(), var x: Int = 500, var y: Int = 500, val speed: Int = 5) {

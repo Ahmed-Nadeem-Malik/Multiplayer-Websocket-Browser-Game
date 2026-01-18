@@ -1,4 +1,4 @@
-import {InputState, inputState, Player, PlayerDTO, Players} from "./game.js";
+import {inputState, Player, PlayerDTO, Players} from "./game.js";
 
 /**
  * WebSocket endpoint for movement messages.

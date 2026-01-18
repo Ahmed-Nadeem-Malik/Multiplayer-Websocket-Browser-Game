@@ -2,7 +2,7 @@
  * Entry point that wires input handling and the game loop.
  */
 import {connectWebSocket, player, players, sendInputState} from "./websocket.js";
-import {canvas, ctx, InputState, inputState} from "./game.js";
+import {canvas, ctx, inputState} from "./game.js";
 import {isMovementKey, startGameLoop} from "./utils.js";
 
 /**
