@@ -5,6 +5,7 @@ val prometheus_version: String by project
 plugins {
     kotlin("jvm") version "2.2.21"
     id("io.ktor.plugin") version "3.3.2"
+    kotlin("plugin.serialization") version "2.3.0"
 }
 
 group = "com.example"
@@ -36,6 +37,8 @@ dependencies {
     implementation("org.jetbrains.kotlin-wrappers:kotlin-css-jvm:2025.6.4")
     implementation("io.ktor:ktor-server-html-builder:3.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-html:0.12.0")
+    implementation("io.ktor:ktor-client-content-negotiation:3.3.2")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.2")
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }

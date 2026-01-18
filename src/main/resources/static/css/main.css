@@ -2,6 +2,23 @@ body {
     background-color: #1c3551
 }
 
+.player {
+    outline: 2px solid black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    width: 50%;
+}
+
+#canvas {
+    border: 1px solid black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+}
+
 #h1 {
     color: white;
     text-align: center;
