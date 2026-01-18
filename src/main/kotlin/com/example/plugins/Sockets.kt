@@ -1,5 +1,6 @@
-package com.example
+package com.example.plugins
 
+import com.example.model.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
@@ -10,12 +11,14 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.seconds
 
 fun Application.configureSockets() {
+    val json = Json { encodeDefaults = true } // to fix the serialisation issue
+
     install(WebSockets) {
         pingPeriod = 15.seconds
         timeout = 15.seconds
         maxFrameSize = Long.MAX_VALUE
         masking = false
-        contentConverter = KotlinxWebsocketSerializationConverter(Json)
+        contentConverter = KotlinxWebsocketSerializationConverter(json)
     }
     routing {
         webSocket("/ws") { // websocketSession
@@ -31,22 +34,27 @@ fun Application.configureSockets() {
 
         webSocket("/movement") {
             val player = Player()
-
-            val initMsg = Json.encodeToString(InitPlayer(id = player.id))
-            send(Frame.Text(initMsg))
+            PlayerStore.setPlayer(player)
+            val initPlayerMsg = json.encodeToString(InitPlayer(type = "InitPlayer", player))
+            val initPlayersMsg =
+                json.encodeToString(InitPlayers(type = "InitPlayers", players = PlayerStore.getPlayers()))
+            send(Frame.Text(initPlayerMsg))
+            //send(Frame.Text(initPlayersMsg))
 
             try {
                 for (frame in incoming) {
                     if (frame !is Frame.Text) continue
 
                     val movement = try {
-                        Json.decodeFromString<Movement>(frame.readText())
+                        json.decodeFromString<Movement>(frame.readText())
                     } catch (_: SerializationException) {
                         application.log.warn("Invalid Movement payload; ignoring")
                         continue
                     }
 
                     application.log.warn("This is a movement $movement")
+                    player.update(movement)
+
                 }
             } catch (e: Throwable) {
                 application.log.warn("Unknown Error", e)

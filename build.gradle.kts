@@ -39,6 +39,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-html:0.12.0")
     implementation("io.ktor:ktor-client-content-negotiation:3.3.2")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.2")
+    implementation("org.jetbrains.exposed:exposed-core:0.61.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.61.0")
+    implementation("com.h2database:h2:2.3.232")
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }

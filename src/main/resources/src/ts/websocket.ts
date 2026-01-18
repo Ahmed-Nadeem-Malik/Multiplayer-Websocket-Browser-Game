@@ -1,4 +1,4 @@
-import {inputState, Player} from "./game.js";
+import {inputState, Player, Players} from "./game.js";
 
 /**
  * WebSocket endpoint for movement messages.
@@ -14,6 +14,8 @@ let webSocket: WebSocket | null = null;
  * Local player instance synced with server messages.
  */
 export const player = new Player();
+
+export const players = new Players();
 
 /**
  * Connects to the WebSocket server with auto-reconnect.
@@ -36,8 +38,22 @@ export function connectWebSocket(): void {
      * Applies server initialization messages.
      */
     webSocket.addEventListener("message", (e: MessageEvent) => {
-        const msg = JSON.parse(e.data as string) as InitMsg
-        player.setId(msg.id)
+        const msg = JSON.parse(e.data as string) as InitMsg;
+        console.log(msg);
+        console.log("_______________________");
+        switch (msg.type) {
+            case "InitPlayer":
+                player.hydrate(msg.player);
+                player.printPlayer();
+                break;
+            case "InitPlayers":
+            /*
+             players.setPlayers(msg.body);
+             players.printPlayers();
+             break;
+
+             */
+        }
     });
 
     /**
@@ -71,8 +87,15 @@ export function sendInputState(): void {
 /**
  * Message payload for initializing player identity.
  */
-type InitMsg = {
-    type: "InitPlayer";
+type InitMsg =
+    | { type: "InitPlayer"; player: PlayerDTO }
+    | { type: "InitPlayers"; players: Record<string, PlayerDTO> };
+
+export type PlayerDTO = {
     id: string;
+    x: number;
+    y: number;
+    speed: number;
 }
+
 

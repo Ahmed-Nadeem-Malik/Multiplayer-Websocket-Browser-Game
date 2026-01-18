@@ -1,3 +1,5 @@
+import {PlayerDTO} from "./websocket";
+
 /**
  * Represents the current input state for movement keys.
  */
@@ -28,10 +30,14 @@ export const ctx = canvas.getContext("2d")!;
  */
 export class Player {
     private id: String | undefined
-    private x = 500;
-    private y = 500;
-    private radius = 20;
+    private x: number = 500;
+    private y: number = 500;
+    private radius: number = 20;
     private speed = 5;
+
+    public hydrate(data: PlayerDTO) {
+        Object.assign(this, data);
+    }
 
     /**
      * Assigns the server-provided player ID.
@@ -57,5 +63,21 @@ export class Player {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.stroke();
+    }
+
+    public printPlayer(): void {
+        console.log("The player has an id" + this.id)
+    }
+}
+
+export class Players {
+    private hashMap: Record<string, Player> = {};
+
+    public setPlayers(jsonData: Record<string, Player>) {
+        this.hashMap = jsonData;
+    }
+
+    public printPlayers() {
+        console.log(this.hashMap);
     }
 }
