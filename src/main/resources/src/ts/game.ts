@@ -4,21 +4,14 @@ import {PLAYER_OPACITY, PLAYER_RADIUS} from "./constants.js";
  * Represents the current input state for movement keys.
  */
 export type MovementState = {
-    w: boolean;
-    a: boolean;
-    s: boolean;
-    d: boolean;
+    w: boolean; a: boolean; s: boolean; d: boolean;
 };
 
 /**
  * Serializable data shape for player state.
  */
 export type PlayerSnapshot = {
-    id: string;
-    x: number;
-    y: number;
-    speed: number;
-    colour: string;
+    id: string; x: number; y: number; speed: number; colour: string;
 };
 
 export const movementState: MovementState = {w: false, a: false, s: false, d: false};
@@ -32,26 +25,14 @@ export class Player {
     private x: number = 500;
     private y: number = 500;
     private radius: number = PLAYER_RADIUS;
-    private speed: number = 5;
     private colour: string = "#1F51FF";
 
     public applySnapshot(snapshot: PlayerSnapshot): void {
         Object.assign(this, snapshot);
     }
 
-    public setId(id: string): void {
-        this.id = id;
-    }
-
     public getId(): string | undefined {
         return this.id;
-    }
-
-    public update(movement: MovementState): void {
-        if (movement.w) this.y -= this.speed;
-        if (movement.s) this.y += this.speed;
-        if (movement.a) this.x -= this.speed;
-        if (movement.d) this.x += this.speed;
     }
 
     public getX(): number {

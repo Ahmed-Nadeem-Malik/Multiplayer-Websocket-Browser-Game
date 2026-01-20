@@ -1,3 +1,4 @@
+import { PLAYER_OPACITY, PLAYER_RADIUS } from "./constants.js";
 export const movementState = { w: false, a: false, s: false, d: false };
 export const canvas = document.getElementById("gameCanvas");
 export const context = canvas.getContext("2d");
@@ -5,28 +6,14 @@ export class Player {
     constructor() {
         this.x = 500;
         this.y = 500;
-        this.radius = 20;
-        this.speed = 5;
+        this.radius = PLAYER_RADIUS;
         this.colour = "#1F51FF";
     }
     applySnapshot(snapshot) {
         Object.assign(this, snapshot);
     }
-    setId(id) {
-        this.id = id;
-    }
     getId() {
         return this.id;
-    }
-    update(movement) {
-        if (movement.w)
-            this.y -= this.speed;
-        if (movement.s)
-            this.y += this.speed;
-        if (movement.a)
-            this.x -= this.speed;
-        if (movement.d)
-            this.x += this.speed;
     }
     getX() {
         return this.x;
@@ -39,7 +26,7 @@ export class Player {
         context.beginPath();
         context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         context.fillStyle = this.colour;
-        context.globalAlpha = 0.85;
+        context.globalAlpha = PLAYER_OPACITY;
         context.fill();
         context.restore();
     }

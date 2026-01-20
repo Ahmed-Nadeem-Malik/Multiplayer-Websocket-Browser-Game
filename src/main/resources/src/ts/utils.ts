@@ -14,12 +14,7 @@ export function isMovementKey(key: string): key is keyof MovementState {
 }
 
 
-export function startRenderLoop(
-    playerRegistry: Players,
-    localPlayer: Player,
-    renderContext: CanvasRenderingContext2D,
-    gameCanvas: HTMLCanvasElement
-): void {
+export function startRenderLoop(playerRegistry: Players, localPlayer: Player, renderContext: CanvasRenderingContext2D, gameCanvas: HTMLCanvasElement): void {
     const loop = (): void => {
         renderContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
@@ -28,22 +23,11 @@ export function startRenderLoop(
 
         renderContext.save();
         renderContext.translate(-cameraX, -cameraY);
+
         drawGrid(renderContext, cameraX, cameraY, gameCanvas.width, gameCanvas.height);
-        renderContext.beginPath();
-        renderContext.arc(WORLD_CENTER, WORLD_CENTER, WORLD_RADIUS, 0, Math.PI * 2);
-        renderContext.strokeStyle = WORLD_BORDER_COLOR;
-        renderContext.lineWidth = WORLD_BORDER_WIDTH;
-        renderContext.stroke();
+        drawWorldBorder(renderContext);
+        drawPlayers(playerRegistry, localPlayer);
 
-        const localId = localPlayer.getId();
-        for (const [playerId, currentPlayer] of Object.entries(playerRegistry.getAll())) {
-            if (localId && playerId === localId) {
-                continue;
-            }
-            currentPlayer.draw();
-        }
-
-        localPlayer.draw();
         renderContext.restore();
         requestAnimationFrame(loop);
     };
@@ -51,13 +35,27 @@ export function startRenderLoop(
     requestAnimationFrame(loop);
 }
 
-function drawGrid(
-    renderContext: CanvasRenderingContext2D,
-    cameraX: number,
-    cameraY: number,
-    viewportWidth: number,
-    viewportHeight: number
-): void {
+function drawPlayers(playerRegistry: Players, localPlayer: Player): void {
+    const localId = localPlayer.getId();
+    for (const [playerId, currentPlayer] of Object.entries(playerRegistry.getAll())) {
+        if (localId && playerId === localId) {
+            continue;
+        }
+        currentPlayer.draw();
+    }
+
+    localPlayer.draw();
+}
+
+function drawWorldBorder(renderContext: CanvasRenderingContext2D): void {
+    renderContext.beginPath();
+    renderContext.arc(WORLD_CENTER, WORLD_CENTER, WORLD_RADIUS, 0, Math.PI * 2);
+    renderContext.strokeStyle = WORLD_BORDER_COLOR;
+    renderContext.lineWidth = WORLD_BORDER_WIDTH;
+    renderContext.stroke();
+}
+
+function drawGrid(renderContext: CanvasRenderingContext2D, cameraX: number, cameraY: number, viewportWidth: number, viewportHeight: number): void {
     const startX = Math.floor(cameraX / GRID_SIZE) * GRID_SIZE;
     const startY = Math.floor(cameraY / GRID_SIZE) * GRID_SIZE;
     const endX = cameraX + viewportWidth;

@@ -26,7 +26,7 @@ data class Player(
 
         val dx = x - WORLD_CENTER
         val dy = y - WORLD_CENTER
-        val distance = sqrt((dx * dx + dy * dy).toDouble())
+        val distance = sqrt((dx * dx + dy * dy))
         if (distance > WORLD_RADIUS) {
             val scale = WORLD_RADIUS / distance
             x = (WORLD_CENTER + dx * scale).toInt()
@@ -39,13 +39,9 @@ data class Player(
         private const val WORLD_CENTER = WORLD_RADIUS
         private const val DEFAULT_X = WORLD_CENTER.toInt()
         private const val DEFAULT_Y = WORLD_CENTER.toInt()
-        private const val DEFAULT_SPEED = 5
+        private const val DEFAULT_SPEED = 3
         private val NEON_COLOURS = listOf(
-            "#39FF14",
-            "#FF073A",
-            "#00E5FF",
-            "#FF00FF",
-            "#FF9100"
+            "#39FF14", "#FF073A", "#00E5FF", "#FF00FF", "#FF9100"
         )
 
         private fun randomColour(): String = NEON_COLOURS.random()
@@ -57,12 +53,7 @@ data class Player(
  */
 @Serializable
 data class MovementInput(
-    val type: String,
-    val id: String,
-    val w: Boolean,
-    val a: Boolean,
-    val s: Boolean,
-    val d: Boolean
+    val type: String, val id: String, val w: Boolean, val a: Boolean, val s: Boolean, val d: Boolean
 )
 
 /**

@@ -62,17 +62,15 @@ export function sendInputState(): void {
     if (!playerId) return;
 
     socket.send(JSON.stringify({
-        type: "input",
-        id: playerId,
-        ...movementState,
+        type: "input", id: playerId, ...movementState,
     }));
 }
 
 /**
  * Message payload for initializing player identity.
  */
-type InitMessage =
-    | { type: "InitPlayer"; player: PlayerSnapshot }
-    | { type: "InitPlayers"; players: Record<string, PlayerSnapshot> };
+type InitMessage = | { type: "InitPlayer"; player: PlayerSnapshot } | {
+    type: "InitPlayers"; players: Record<string, PlayerSnapshot>
+};
 
 

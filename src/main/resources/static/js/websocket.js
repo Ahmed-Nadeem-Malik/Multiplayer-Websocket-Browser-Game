@@ -51,8 +51,6 @@ export function sendInputState() {
     if (!playerId)
         return;
     socket.send(JSON.stringify({
-        type: "input",
-        id: playerId,
-        ...movementState,
+        type: "input", id: playerId, ...movementState,
     }));
 }
