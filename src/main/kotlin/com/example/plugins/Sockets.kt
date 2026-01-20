@@ -10,68 +10,78 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * Configures the WebSocket endpoint used for player movement updates.
+ */
 fun Application.configureSockets() {
-    val json = Json { encodeDefaults = true } // to fix the serialisation issue
+    val jsonCodec = Json { encodeDefaults = true }
 
     install(WebSockets) {
         pingPeriod = 15.seconds
         timeout = 15.seconds
         maxFrameSize = Long.MAX_VALUE
         masking = false
-        contentConverter = KotlinxWebsocketSerializationConverter(json)
+        contentConverter = KotlinxWebsocketSerializationConverter(jsonCodec)
     }
     routing {
-        webSocket("/ws") { // websocketSession
-            for (frame in incoming) {
-                frame as? Frame.Text ?: continue
-                val text = frame.readText()
-                outgoing.send(Frame.Text("YOU SAID: $text"))
-                if (text.equals("bye", ignoreCase = true)) {
-                    close(CloseReason(CloseReason.Codes.NORMAL, "Client said BYE"))
-                }
-            }
-        }
-
         webSocket("/movement") {
             val player = Player()
-            PlayerStore.setPlayer(player)
-            SessionStore.addSession(player.id, this)
+            PlayerRepository.addPlayer(player)
+            SessionRegistry.addSession(player.id, this)
 
-            val initPlayerMsg = json.encodeToString(InitPlayer(type = "InitPlayer", player))
-            val initPlayersMsg =
-                json.encodeToString(InitPlayers(type = "InitPlayers", players = PlayerStore.getPlayers()))
-            send(Frame.Text(initPlayerMsg))
-            send(Frame.Text(initPlayersMsg))
+            sendInitialState(jsonCodec, player)
 
             try {
                 for (frame in incoming) {
                     if (frame !is Frame.Text) continue
 
-                    val movement = try {
-                        json.decodeFromString<Movement>(frame.readText())
-                    } catch (_: SerializationException) {
-                        application.log.warn("Invalid Movement payload; ignoring")
-                        continue
-                    }
-
-                    player.update(movement)
-                    val updatePlayersMsg =
-                        json.encodeToString(InitPlayers(type = "InitPlayers", players = PlayerStore.getPlayers()))
-                    for (session in SessionStore.getSessions()) {
-                        session.send(Frame.Text(updatePlayersMsg))
-                    }
+                    val movementInput = decodeMovementInput(jsonCodec, frame.readText(), application) ?: continue
+                    player.update(movementInput)
+                    broadcastPlayers(jsonCodec)
                 }
-            } catch (e: Throwable) {
-                application.log.warn("Unknown Error", e)
+            } catch (exception: Throwable) {
+                application.log.warn("Unknown error", exception)
             } finally {
-                SessionStore.removeSession(player.id)
-                PlayerStore.removePlayer(player.id)
-                val updatePlayersMsg =
-                    json.encodeToString(InitPlayers(type = "InitPlayers", players = PlayerStore.getPlayers()))
-                for (session in SessionStore.getSessions()) {
-                    session.send(Frame.Text(updatePlayersMsg))
-                }
+                SessionRegistry.removeSession(player.id)
+                PlayerRepository.removePlayer(player.id)
+                broadcastPlayers(jsonCodec)
             }
         }
+    }
+}
+
+/**
+ * Sends initial player identity and world state to the new session.
+ */
+internal suspend fun DefaultWebSocketServerSession.sendInitialState(jsonCodec: Json, player: Player) {
+    val initPlayerMessage = jsonCodec.encodeToString(InitPlayerMessage(type = "InitPlayer", player))
+    val initPlayersMessage =
+        jsonCodec.encodeToString(InitPlayersMessage(type = "InitPlayers", players = PlayerRepository.getPlayers()))
+    send(Frame.Text(initPlayerMessage))
+    send(Frame.Text(initPlayersMessage))
+}
+
+/**
+ * Decodes movement input JSON payloads from the client.
+ */
+internal fun decodeMovementInput(
+    jsonCodec: Json, payload: String, application: Application
+): MovementInput? {
+    return try {
+        jsonCodec.decodeFromString<MovementInput>(payload)
+    } catch (_: SerializationException) {
+        application.log.warn("Invalid movement payload; ignoring")
+        null
+    }
+}
+
+/**
+ * Broadcasts the latest player positions to all connected sessions.
+ */
+internal suspend fun broadcastPlayers(jsonCodec: Json) {
+    val updatePlayersMessage =
+        jsonCodec.encodeToString(InitPlayersMessage(type = "InitPlayers", players = PlayerRepository.getPlayers()))
+    for (session in SessionRegistry.getSessions()) {
+        session.send(Frame.Text(updatePlayersMessage))
     }
 }

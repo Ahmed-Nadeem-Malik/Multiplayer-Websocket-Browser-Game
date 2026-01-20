@@ -1,73 +1,58 @@
-import { inputState, Player, Players } from "./game.js";
+import { movementState, Player, Players } from "./game.js";
+const webSocketUrl = "ws://localhost:8080/movement";
+let socket = null;
+export const localPlayer = new Player();
+export const playerRegistry = new Players();
 /**
- * WebSocket endpoint for movement messages.
- */
-const wsURI = "ws://localhost:8080/movement";
-/**
- * Active WebSocket connection instance.
- */
-let webSocket = null;
-/**
- * Local player instance synced with server messages.
- */
-export const player = new Player();
-export const players = new Players();
-/**
- * Connects to the WebSocket server with auto-reconnect.
+ * Connects to the WebSocket server and retries on close.
  */
 export function connectWebSocket() {
-    if (webSocket && (webSocket.readyState === WebSocket.OPEN || webSocket.readyState === WebSocket.CONNECTING)) {
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         return;
     }
-    webSocket = new WebSocket(wsURI);
-    /**
-     * Logs successful WebSocket connection.
-     */
-    webSocket.addEventListener("open", () => {
+    socket = new WebSocket(webSocketUrl);
+    socket.addEventListener("open", () => {
         console.log("WebSocket connected");
     });
-    /**
-     * Applies server initialization messages.
-     */
-    webSocket.addEventListener("message", (e) => {
-        const msg = JSON.parse(e.data);
-        switch (msg.type) {
+    socket.addEventListener("message", (event) => {
+        const message = JSON.parse(event.data);
+        switch (message.type) {
             case "InitPlayer":
-                player.hydrate(msg.player);
+                localPlayer.applySnapshot(message.player);
                 break;
             case "InitPlayers":
-                players.hydrate(msg.players);
-                console.log(players);
+                playerRegistry.applySnapshot(message.players);
+                const localId = localPlayer.getId();
+                if (localId) {
+                    const snapshot = message.players[localId];
+                    if (snapshot) {
+                        localPlayer.applySnapshot(snapshot);
+                    }
+                }
                 break;
         }
     });
-    /**
-     * Handles reconnect on close.
-     */
-    webSocket.addEventListener("close", () => {
+    socket.addEventListener("close", () => {
         console.log("WebSocket closed - reconnecting...");
-        webSocket = null;
+        socket = null;
         setTimeout(connectWebSocket, 1000);
     });
-    /**
-     * Logs WebSocket errors.
-     */
-    webSocket.addEventListener("error", () => {
+    socket.addEventListener("error", () => {
         console.log("WebSocket error");
     });
 }
 /**
- * Sends the current input state to the server.
+ * Sends the current input state when the socket is open.
  */
 export function sendInputState() {
-    if (!webSocket || webSocket.readyState !== WebSocket.OPEN)
+    if (!socket || socket.readyState !== WebSocket.OPEN)
         return;
-    const id = player.getId();
-    if (!id)
+    const playerId = localPlayer.getId();
+    if (!playerId)
         return;
-    webSocket.send(JSON.stringify({
+    socket.send(JSON.stringify({
         type: "input",
-        id,
-        ...inputState,
+        id: playerId,
+        ...movementState,
     }));
 }

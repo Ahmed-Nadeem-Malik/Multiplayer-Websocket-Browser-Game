@@ -11,19 +11,18 @@ import io.micrometer.prometheus.PrometheusMeterRegistry
 import org.slf4j.event.Level
 
 fun Application.configureMonitoring() {
-    val appMicrometerRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+    val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
 
     install(MicrometerMetrics) {
-        registry = appMicrometerRegistry
-        // ...
+        registry = meterRegistry
     }
     install(CallLogging) {
         level = Level.INFO
-        filter { call -> call.request.path().startsWith("/") }
+        filter { requestCall -> requestCall.request.path().startsWith("/") }
     }
     routing {
         get("/metrics-micrometer") {
-            call.respond(appMicrometerRegistry.scrape())
+            call.respond(meterRegistry.scrape())
         }
     }
 }

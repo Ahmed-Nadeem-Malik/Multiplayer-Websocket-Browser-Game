@@ -1,29 +1,81 @@
-import {InputState, Player, Players} from "./game.js";
+import {MovementState, Player, Players} from "./game.js";
+import {
+    GRID_COLOR,
+    GRID_LINE_WIDTH,
+    GRID_SIZE,
+    WORLD_BORDER_COLOR,
+    WORLD_BORDER_WIDTH,
+    WORLD_CENTER,
+    WORLD_RADIUS,
+} from "./constants.js";
 
-/**
- * Checks whether a key is one of the movement keys.
- */
-export function isMovementKey(k: string): k is keyof InputState {
-    return k === "w" || k === "a" || k === "s" || k === "d";
+export function isMovementKey(key: string): key is keyof MovementState {
+    return key === "w" || key === "a" || key === "s" || key === "d";
 }
 
-/**
- * Starts the requestAnimationFrame loop for updates and rendering.
- */
-export function startGameLoop(
-    player: Player,
-    players: Players,
-    inputState: InputState,
-    ctx: CanvasRenderingContext2D,
-    canvas: HTMLCanvasElement
+
+export function startRenderLoop(
+    playerRegistry: Players,
+    localPlayer: Player,
+    renderContext: CanvasRenderingContext2D,
+    gameCanvas: HTMLCanvasElement
 ): void {
     const loop = (): void => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (const currentPlayer of Object.values(players.getPlayers())) {
+        renderContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+        const cameraX = localPlayer.getX() - gameCanvas.width / 2;
+        const cameraY = localPlayer.getY() - gameCanvas.height / 2;
+
+        renderContext.save();
+        renderContext.translate(-cameraX, -cameraY);
+        drawGrid(renderContext, cameraX, cameraY, gameCanvas.width, gameCanvas.height);
+        renderContext.beginPath();
+        renderContext.arc(WORLD_CENTER, WORLD_CENTER, WORLD_RADIUS, 0, Math.PI * 2);
+        renderContext.strokeStyle = WORLD_BORDER_COLOR;
+        renderContext.lineWidth = WORLD_BORDER_WIDTH;
+        renderContext.stroke();
+
+        const localId = localPlayer.getId();
+        for (const [playerId, currentPlayer] of Object.entries(playerRegistry.getAll())) {
+            if (localId && playerId === localId) {
+                continue;
+            }
             currentPlayer.draw();
         }
+
+        localPlayer.draw();
+        renderContext.restore();
         requestAnimationFrame(loop);
     };
 
     requestAnimationFrame(loop);
+}
+
+function drawGrid(
+    renderContext: CanvasRenderingContext2D,
+    cameraX: number,
+    cameraY: number,
+    viewportWidth: number,
+    viewportHeight: number
+): void {
+    const startX = Math.floor(cameraX / GRID_SIZE) * GRID_SIZE;
+    const startY = Math.floor(cameraY / GRID_SIZE) * GRID_SIZE;
+    const endX = cameraX + viewportWidth;
+    const endY = cameraY + viewportHeight;
+
+    renderContext.beginPath();
+    renderContext.strokeStyle = GRID_COLOR;
+    renderContext.lineWidth = GRID_LINE_WIDTH;
+
+    for (let x = startX; x <= endX; x += GRID_SIZE) {
+        renderContext.moveTo(x, cameraY);
+        renderContext.lineTo(x, endY);
+    }
+
+    for (let y = startY; y <= endY; y += GRID_SIZE) {
+        renderContext.moveTo(cameraX, y);
+        renderContext.lineTo(endX, y);
+    }
+
+    renderContext.stroke();
 }

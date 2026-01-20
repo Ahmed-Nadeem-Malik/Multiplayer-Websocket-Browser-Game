@@ -1,0 +1,9 @@
+export const WORLD_RADIUS = 3000;
+export const WORLD_CENTER = WORLD_RADIUS;
+export const GRID_SIZE = 100;
+export const GRID_COLOR = "rgba(0, 0, 0, 0.08)";
+export const GRID_LINE_WIDTH = 1;
+export const WORLD_BORDER_COLOR = "rgba(0, 0, 0, 0.25)";
+export const WORLD_BORDER_WIDTH = 6;
+export const PLAYER_RADIUS = 20;
+export const PLAYER_OPACITY = 0.85;

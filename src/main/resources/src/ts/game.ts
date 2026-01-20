@@ -1,7 +1,9 @@
+import {PLAYER_OPACITY, PLAYER_RADIUS} from "./constants.js";
+
 /**
  * Represents the current input state for movement keys.
  */
-export type InputState = {
+export type MovementState = {
     w: boolean;
     a: boolean;
     s: boolean;
@@ -11,93 +13,80 @@ export type InputState = {
 /**
  * Serializable data shape for player state.
  */
-export type PlayerDTO = {
+export type PlayerSnapshot = {
     id: string;
     x: number;
     y: number;
     speed: number;
+    colour: string;
 };
 
-/**
- * Shared input state used by the game loop.
- */
-export const inputState: InputState = {w: false, a: false, s: false, d: false};
+export const movementState: MovementState = {w: false, a: false, s: false, d: false};
 
-/**
- * Main game canvas element.
- */
 export const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 
-/**
- * 2D rendering context for the game canvas.
- */
-export const ctx = canvas.getContext("2d")!;
+export const context = canvas.getContext("2d")!;
 
-/**
- * Player entity rendered and updated by the game loop.
- */
 export class Player {
-    private id: String | undefined
+    private id: string | undefined
     private x: number = 500;
     private y: number = 500;
-    private radius: number = 20;
-    private speed = 5;
+    private radius: number = PLAYER_RADIUS;
+    private speed: number = 5;
+    private colour: string = "#1F51FF";
 
-    public hydrate(data: PlayerDTO) {
-        Object.assign(this, data);
+    public applySnapshot(snapshot: PlayerSnapshot): void {
+        Object.assign(this, snapshot);
     }
 
-    /**
-     * Assigns the server-provided player ID.
-     */
-    public setId(id: String): void {
+    public setId(id: string): void {
         this.id = id;
     }
 
-    /**
-     * Returns the current player id.
-     */
-    public getId(): String | undefined {
+    public getId(): string | undefined {
         return this.id;
     }
 
-    /**
-     * Updates player position based on input.
-     */
-    public update(input: InputState): void {
-        if (input.w) this.y -= this.speed;
-        if (input.s) this.y += this.speed;
-        if (input.a) this.x -= this.speed;
-        if (input.d) this.x += this.speed;
+    public update(movement: MovementState): void {
+        if (movement.w) this.y -= this.speed;
+        if (movement.s) this.y += this.speed;
+        if (movement.a) this.x -= this.speed;
+        if (movement.d) this.x += this.speed;
     }
 
-    /**
-     * Draws the player on the canvas.
-     */
+    public getX(): number {
+        return this.x;
+    }
+
+    public getY(): number {
+        return this.y;
+    }
+
     public draw(): void {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-        ctx.strokeStyle = "#ffffff";
-        ctx.stroke();
+        context.save();
+        context.beginPath();
+        context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        context.fillStyle = this.colour;
+        context.globalAlpha = PLAYER_OPACITY;
+        context.fill();
+        context.restore();
     }
 }
 
 export class Players {
-    private hashMap: Record<string, Player> = {};
+    private playersById: Record<string, Player> = {};
 
-    public getPlayers() {
-        return this.hashMap;
+    public getAll(): Record<string, Player> {
+        return this.playersById;
     }
 
-    public hydrate(jsonData: Record<string, PlayerDTO>) {
-        const next: Record<string, Player> = {};
-        for (const [id, dto] of Object.entries(jsonData)) {
+    public applySnapshot(snapshot: Record<string, PlayerSnapshot>): void {
+        const nextPlayers: Record<string, Player> = {};
+        for (const [id, playerSnapshot] of Object.entries(snapshot)) {
             const player = new Player();
-            player.hydrate(dto);
-            next[id] = player;
+            player.applySnapshot(playerSnapshot);
+            nextPlayers[id] = player;
         }
-        this.hashMap = next;
+        this.playersById = nextPlayers;
     }
 }

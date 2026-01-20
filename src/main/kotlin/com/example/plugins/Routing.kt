@@ -28,8 +28,8 @@ fun Application.configureRouting() {
         }
 
         get("/health") {
-            data class HealthResponse(val status: String)
-            call.respond(HealthResponse("Healthy"))
+            data class HealthStatusResponse(val status: String)
+            call.respond(HealthStatusResponse("Healthy"))
         }
 
     }

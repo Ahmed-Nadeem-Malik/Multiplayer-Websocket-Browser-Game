@@ -5,9 +5,9 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.defaultheaders.*
 
-fun Application.configureHTTP() {
+fun Application.configureHttp() {
     install(DefaultHeaders) {
-        header("X-Engine", "Ktor") // will send this header with each response
+        header("X-Engine", "Ktor")
     }
     install(CORS) {
         allowMethod(HttpMethod.Options)
@@ -16,6 +16,6 @@ fun Application.configureHTTP() {
         allowMethod(HttpMethod.Patch)
         allowHeader(HttpHeaders.Authorization)
         allowHeader("MyCustomHeader")
-        anyHost() // @TODO: Don't do this in production if possible. Try to limit it.
+        anyHost()
     }
 }

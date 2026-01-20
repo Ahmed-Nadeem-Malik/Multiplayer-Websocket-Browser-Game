@@ -1,36 +1,35 @@
-/**
- * Entry point that wires input handling and the game loop.
- */
-import {connectWebSocket, player, players, sendInputState} from "./websocket.js";
-import {canvas, ctx, inputState} from "./game.js";
-import {isMovementKey, startGameLoop} from "./utils.js";
+import {connectWebSocket, localPlayer, playerRegistry, sendInputState} from "./websocket.js";
+import {canvas, context, movementState} from "./game.js";
+import {isMovementKey, startRenderLoop} from "./utils.js";
 
-/**
- * Tracks movement key presses and forwards updates.
- */
-document.addEventListener("keydown", (e: KeyboardEvent) => {
-    const k = e.key.toLowerCase();
-    if (!isMovementKey(k)) return;
+document.addEventListener("keydown", (event: KeyboardEvent) => {
+    const key = event.key.toLowerCase();
+    if (!isMovementKey(key)) return;
 
-    if (!inputState[k]) {
-        inputState[k] = true;
+    if (!movementState[key]) {
+        movementState[key] = true;
         sendInputState();
     }
 });
 
-/**
- * Tracks movement key releases and forwards updates.
- */
-document.addEventListener("keyup", (e: KeyboardEvent) => {
-    const k = e.key.toLowerCase();
-    if (!isMovementKey(k)) return;
+document.addEventListener("keyup", (event: KeyboardEvent) => {
+    const key = event.key.toLowerCase();
+    if (!isMovementKey(key)) return;
 
-    if (inputState[k]) {
-        inputState[k] = false;
+    if (movementState[key]) {
+        movementState[key] = false;
         sendInputState();
     }
 });
+
+const resizeCanvas = (): void => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+};
+
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
 connectWebSocket();
 setInterval(sendInputState, 1);
-startGameLoop(player, players, inputState, ctx, canvas);
+startRenderLoop(playerRegistry, localPlayer, context, canvas);

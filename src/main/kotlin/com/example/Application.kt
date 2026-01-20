@@ -12,7 +12,7 @@ fun Application.module() {
     configureSecurity()
     configureSockets()
     configureMonitoring()
-    configureHTTP()
+    configureHttp()
     configureRouting()
     configureTemplating()
 }

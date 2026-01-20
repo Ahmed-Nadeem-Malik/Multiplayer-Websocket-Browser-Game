@@ -1,79 +1,63 @@
-/**
- * Shared input state used by the game loop.
- */
-export const inputState = { w: false, a: false, s: false, d: false };
-/**
- * Main game canvas element.
- */
+export const movementState = { w: false, a: false, s: false, d: false };
 export const canvas = document.getElementById("gameCanvas");
-/**
- * 2D rendering context for the game canvas.
- */
-export const ctx = canvas.getContext("2d");
-/**
- * Player entity rendered and updated by the game loop.
- */
+export const context = canvas.getContext("2d");
 export class Player {
     constructor() {
         this.x = 500;
         this.y = 500;
         this.radius = 20;
         this.speed = 5;
+        this.colour = "#1F51FF";
     }
-    hydrate(data) {
-        Object.assign(this, data);
+    applySnapshot(snapshot) {
+        Object.assign(this, snapshot);
     }
-    /**
-     * Assigns the server-provided player ID.
-     */
     setId(id) {
         this.id = id;
     }
-    /**
-     * Returns the current player id.
-     */
     getId() {
         return this.id;
     }
-    /**
-     * Updates player position based on input.
-     */
-    update(input) {
-        if (input.w)
+    update(movement) {
+        if (movement.w)
             this.y -= this.speed;
-        if (input.s)
+        if (movement.s)
             this.y += this.speed;
-        if (input.a)
+        if (movement.a)
             this.x -= this.speed;
-        if (input.d)
+        if (movement.d)
             this.x += this.speed;
     }
-    /**
-     * Draws the player on the canvas.
-     */
+    getX() {
+        return this.x;
+    }
+    getY() {
+        return this.y;
+    }
     draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-        ctx.strokeStyle = "#ffffff";
-        ctx.stroke();
+        context.save();
+        context.beginPath();
+        context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        context.fillStyle = this.colour;
+        context.globalAlpha = 0.85;
+        context.fill();
+        context.restore();
     }
 }
 export class Players {
     constructor() {
-        this.hashMap = {};
+        this.playersById = {};
     }
-    getPlayers() {
-        return this.hashMap;
+    getAll() {
+        return this.playersById;
     }
-    hydrate(jsonData) {
-        const next = {};
-        for (const [id, dto] of Object.entries(jsonData)) {
+    applySnapshot(snapshot) {
+        const nextPlayers = {};
+        for (const [id, playerSnapshot] of Object.entries(snapshot)) {
             const player = new Player();
-            player.hydrate(dto);
-            next[id] = player;
+            player.applySnapshot(playerSnapshot);
+            nextPlayers[id] = player;
         }
-        this.hashMap = next;
+        this.playersById = nextPlayers;
     }
 }
