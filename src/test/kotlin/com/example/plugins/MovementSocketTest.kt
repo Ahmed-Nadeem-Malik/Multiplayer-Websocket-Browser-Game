@@ -6,6 +6,8 @@ import com.example.model.MovementInput
 import com.example.model.Player
 import com.example.model.PlayerRepository
 import com.example.model.SessionRegistry
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.server.testing.testApplication
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.websocket.Frame
@@ -92,5 +94,40 @@ class MovementSocketTest {
         SessionRegistry.removeSession("session-1")
         SessionRegistry.removeSession("session-2")
         PlayerRepository.removePlayer(player.id)
+    }
+
+    @Test
+    fun movementSocketBroadcastsUpdatedPosition() = testApplication {
+        application {
+            configureSockets()
+        }
+        val jsonCodec = Json { encodeDefaults = true }
+        val client = createClient {
+            install(WebSockets)
+        }
+
+        client.webSocket("/movement") {
+            val initPlayerFrame = incoming.receive() as Frame.Text
+            incoming.receive()
+
+            val initPlayer = jsonCodec.decodeFromString<InitPlayerMessage>(initPlayerFrame.readText())
+            val movementInput = MovementInput(
+                type = "input",
+                id = initPlayer.player.id,
+                w = true,
+                a = false,
+                s = false,
+                d = false
+            )
+
+            send(Frame.Text(jsonCodec.encodeToString(movementInput)))
+
+            val updateFrame = incoming.receive() as Frame.Text
+            val roster = jsonCodec.decodeFromString<InitPlayersMessage>(updateFrame.readText())
+            val updatedPlayer = roster.players[initPlayer.player.id]
+
+            assertNotNull(updatedPlayer)
+            assertEquals(initPlayer.player.y - initPlayer.player.speed, updatedPlayer.y)
+        }
     }
 }
