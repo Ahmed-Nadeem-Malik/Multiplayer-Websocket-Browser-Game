@@ -9,22 +9,25 @@ import kotlin.test.assertTrue
 class SessionRegistryTest {
 
     @Test
-    fun addSessionStoresSession() {
-        val session = mockk<DefaultWebSocketServerSession>(relaxed = true)
-
-        SessionRegistry.addSession("session-1", session)
-
+    fun addSessionStoresSession() = withSession("session-1") { session ->
         assertTrue(SessionRegistry.getSessions().contains(session))
-        SessionRegistry.removeSession("session-1")
     }
 
     @Test
-    fun removeSessionDeletesSession() {
-        val session = mockk<DefaultWebSocketServerSession>(relaxed = true)
-        SessionRegistry.addSession("session-2", session)
-
+    fun removeSessionDeletesSession() = withSession("session-2") { session ->
         SessionRegistry.removeSession("session-2")
 
         assertEquals(0, SessionRegistry.getSessions().count { it == session })
+    }
+
+    private inline fun withSession(id: String, block: (DefaultWebSocketServerSession) -> Unit) {
+        val session = mockk<DefaultWebSocketServerSession>(relaxed = true)
+        SessionRegistry.addSession(id, session)
+
+        try {
+            block(session)
+        } finally {
+            SessionRegistry.removeSession(id)
+        }
     }
 }

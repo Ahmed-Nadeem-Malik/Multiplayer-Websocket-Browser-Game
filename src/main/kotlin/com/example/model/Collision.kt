@@ -1,11 +1,17 @@
 package com.example.model
 
+private fun distanceSquared(dx: Int, dy: Int): Int = dx * dx + dy * dy
+
+private fun hasCollision(dx: Int, dy: Int, radius: Int): Boolean {
+    return distanceSquared(dx, dy) <= radius * radius
+}
+
 fun dotCollision(player: Player, dot: Dot): Boolean {
     val dx = dot.x - player.x
     val dy = dot.y - player.y
     val radius = player.radius + dot.radius
 
-    return (dx * dx + dy * dy) <= radius * radius
+    return hasCollision(dx, dy, radius)
 }
 
 fun playerCollision(player: Player, other: Player): Boolean {
@@ -13,7 +19,7 @@ fun playerCollision(player: Player, other: Player): Boolean {
     val dy = other.y - player.y
     val radius = player.radius + other.radius
 
-    return (dx * dx + dy * dy) <= radius * radius
+    return hasCollision(dx, dy, radius)
 }
 
 fun handleDotCollisions(player: Player): List<Dot> {

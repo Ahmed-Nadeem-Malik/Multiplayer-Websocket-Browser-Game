@@ -27,28 +27,20 @@ private const val BOT_MAX_STEPS = 240
 
 fun Application.configureBots() {
     val jsonCodec = Json { encodeDefaults = true }
-    val bots = MutableList(BOT_COUNT) { index ->
-        Player(id = "$BOT_ID_PREFIX${BOT_ID_START + index}")
-    }
+    val bots = createBots()
 
     bots.forEach(PlayerRepository::addPlayer)
 
     CoroutineScope(Dispatchers.Default).launch {
         while (isActive) {
-            val delayMs = Random.nextLong(BOT_MIN_DELAY_MS, BOT_MAX_DELAY_MS + 1)
-            delay(delayMs)
+            delay(Random.nextLong(BOT_MIN_DELAY_MS, BOT_MAX_DELAY_MS + 1))
 
             val updatedDots = Dots.tick().associateBy { it.id }.toMutableMap()
             val eliminatedPlayers = mutableSetOf<String>()
 
             for (bot in bots.toList()) {
-                val steps = Random.nextInt(BOT_MIN_STEPS, BOT_MAX_STEPS + 1)
-                repeat(steps) {
-                    bot.update(randomMovementInput(bot.id))
-                }
-
-                val collisions = handlePlayerCollisions(bot)
-                eliminatedPlayers.addAll(collisions)
+                applyBotSteps(bot)
+                eliminatedPlayers.addAll(handlePlayerCollisions(bot))
 
                 val collisionDots = handleDotCollisions(bot)
                 for (dot in collisionDots) {
@@ -56,20 +48,37 @@ fun Application.configureBots() {
                 }
             }
 
-            for (eliminatedId in eliminatedPlayers) {
-                SessionRegistry.getSession(eliminatedId)?.close(
-                    CloseReason(CloseReason.Codes.NORMAL, "Collided")
-                )
-                SessionRegistry.removeSession(eliminatedId)
-                PlayerRepository.removePlayer(eliminatedId)
-                bots.removeAll { it.id == eliminatedId }
-            }
+            removeEliminatedBots(bots, eliminatedPlayers)
 
             broadcastPlayers(jsonCodec)
             if (updatedDots.isNotEmpty()) {
                 broadcastDots(jsonCodec, updatedDots.values.toList())
             }
         }
+    }
+}
+
+private fun createBots(): MutableList<Player> {
+    return MutableList(BOT_COUNT) { index ->
+        Player(id = "$BOT_ID_PREFIX${BOT_ID_START + index}")
+    }
+}
+
+private fun applyBotSteps(bot: Player) {
+    val steps = Random.nextInt(BOT_MIN_STEPS, BOT_MAX_STEPS + 1)
+    repeat(steps) {
+        bot.update(randomMovementInput(bot.id))
+    }
+}
+
+private suspend fun removeEliminatedBots(bots: MutableList<Player>, eliminatedPlayers: Set<String>) {
+    for (eliminatedId in eliminatedPlayers) {
+        SessionRegistry.getSession(eliminatedId)?.close(
+            CloseReason(CloseReason.Codes.NORMAL, "Collided")
+        )
+        SessionRegistry.removeSession(eliminatedId)
+        PlayerRepository.removePlayer(eliminatedId)
+        bots.removeAll { it.id == eliminatedId }
     }
 }
 

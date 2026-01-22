@@ -26,9 +26,10 @@ import kotlin.test.assertTrue
 
 class MovementSocketTest {
 
+    private val jsonCodec = Json { encodeDefaults = true }
+
     @Test
     fun decodeMovementInputParsesValidPayload() = testApplication {
-        val jsonCodec = Json { encodeDefaults = true }
         val payload = jsonCodec.encodeToString(
             MovementInput(type = "input", id = "player-1", w = true, a = false, s = true, d = false)
         )
@@ -42,8 +43,6 @@ class MovementSocketTest {
 
     @Test
     fun decodeMovementInputReturnsNullForInvalidPayload() = testApplication {
-        val jsonCodec = Json { encodeDefaults = true }
-
         val result = decodeMovementInput(jsonCodec, "{bad json}", application)
 
         assertNull(result)
@@ -51,53 +50,46 @@ class MovementSocketTest {
 
     @Test
     fun sendInitialStateSendsPlayerAndRoster() = runTest {
-        val jsonCodec = Json { encodeDefaults = true }
-        val player = Player(id = "player-1")
-        PlayerRepository.addPlayer(player)
+        withPlayer("player-1") { player ->
+            val frames = mutableListOf<Frame>()
+            val session = relaxedSession(frames)
 
-        val session = mockk<DefaultWebSocketServerSession>(relaxed = true)
-        val frames = mutableListOf<Frame>()
-        coEvery { session.send(capture(frames)) } returns Unit
+            session.sendInitialState(jsonCodec, player)
 
-        session.sendInitialState(jsonCodec, player)
-
-        assertEquals(3, frames.size)
-        val initPlayer = jsonCodec.decodeFromString<InitPlayerMessage>((frames[0] as Frame.Text).readText())
-        val initPlayers = jsonCodec.decodeFromString<InitPlayersMessage>((frames[1] as Frame.Text).readText())
-        val initDots = jsonCodec.decodeFromString<InitDotsMessage>((frames[2] as Frame.Text).readText())
-        assertEquals(player.id, initPlayer.player.id)
-        assertTrue(initPlayers.players.containsKey(player.id))
-        assertTrue(initDots.dots.isNotEmpty())
-
-        PlayerRepository.removePlayer(player.id)
+            assertEquals(3, frames.size)
+            val initPlayer = jsonCodec.decodeFromString<InitPlayerMessage>((frames[0] as Frame.Text).readText())
+            val initPlayers = jsonCodec.decodeFromString<InitPlayersMessage>((frames[1] as Frame.Text).readText())
+            val initDots = jsonCodec.decodeFromString<InitDotsMessage>((frames[2] as Frame.Text).readText())
+            assertEquals(player.id, initPlayer.player.id)
+            assertTrue(initPlayers.players.containsKey(player.id))
+            assertTrue(initDots.dots.isNotEmpty())
+        }
     }
 
     @Test
     fun broadcastPlayersSendsUpdatesToAllSessions() = runTest {
-        val jsonCodec = Json { encodeDefaults = true }
-        val player = Player(id = "player-2")
-        PlayerRepository.addPlayer(player)
+        withPlayer("player-2") { player ->
+            val framesOne = mutableListOf<Frame>()
+            val framesTwo = mutableListOf<Frame>()
+            val sessionOne = relaxedSession(framesOne)
+            val sessionTwo = relaxedSession(framesTwo)
 
-        val sessionOne = mockk<DefaultWebSocketServerSession>(relaxed = true)
-        val sessionTwo = mockk<DefaultWebSocketServerSession>(relaxed = true)
-        val framesOne = mutableListOf<Frame>()
-        val framesTwo = mutableListOf<Frame>()
-        coEvery { sessionOne.send(capture(framesOne)) } returns Unit
-        coEvery { sessionTwo.send(capture(framesTwo)) } returns Unit
+            SessionRegistry.addSession("session-1", sessionOne)
+            SessionRegistry.addSession("session-2", sessionTwo)
 
-        SessionRegistry.addSession("session-1", sessionOne)
-        SessionRegistry.addSession("session-2", sessionTwo)
+            try {
+                broadcastPlayers(jsonCodec)
 
-        broadcastPlayers(jsonCodec)
-
-        assertEquals(1, framesOne.size)
-        assertEquals(1, framesTwo.size)
-        val updateMessage = jsonCodec.decodeFromString<UpdatePlayersMessage>((framesOne[0] as Frame.Text).readText())
-        assertTrue(updateMessage.players.containsKey(player.id))
-
-        SessionRegistry.removeSession("session-1")
-        SessionRegistry.removeSession("session-2")
-        PlayerRepository.removePlayer(player.id)
+                assertEquals(1, framesOne.size)
+                assertEquals(1, framesTwo.size)
+                val updateMessage =
+                    jsonCodec.decodeFromString<UpdatePlayersMessage>((framesOne[0] as Frame.Text).readText())
+                assertTrue(updateMessage.players.containsKey(player.id))
+            } finally {
+                SessionRegistry.removeSession("session-1")
+                SessionRegistry.removeSession("session-2")
+            }
+        }
     }
 
     @Test
@@ -105,7 +97,6 @@ class MovementSocketTest {
         application {
             configureSockets()
         }
-        val jsonCodec = Json { encodeDefaults = true }
         val client = createClient {
             install(WebSockets)
         }
@@ -134,5 +125,22 @@ class MovementSocketTest {
             assertNotNull(updatedPlayer)
             assertEquals(initPlayer.player.y - initPlayer.player.speed, updatedPlayer.y)
         }
+    }
+
+    private inline fun withPlayer(id: String, block: (Player) -> Unit) {
+        val player = Player(id = id)
+        PlayerRepository.addPlayer(player)
+
+        try {
+            block(player)
+        } finally {
+            PlayerRepository.removePlayer(player.id)
+        }
+    }
+
+    private fun relaxedSession(frames: MutableList<Frame>): DefaultWebSocketServerSession {
+        val session = mockk<DefaultWebSocketServerSession>(relaxed = true)
+        coEvery { session.send(capture(frames)) } returns Unit
+        return session
     }
 }

@@ -2,6 +2,8 @@ import {connectWebSocket, dotRegistry, localPlayer, PlayerConfig, playerRegistry
 import {canvas, context, movementState} from "./game.js";
 import {isMovementKey, startRenderLoop} from "./utils.js";
 
+const DEFAULT_NAME = "undefined";
+
 const menuOverlay = document.getElementById("menuOverlay") as HTMLElement | null;
 const startButton = document.getElementById("startButton") as HTMLButtonElement | null;
 const nameInput = document.getElementById("playerName") as HTMLInputElement | null;
@@ -15,13 +17,17 @@ const setSelectedColour = (button: HTMLButtonElement): void => {
     selectedColour = button.dataset.colour ?? selectedColour;
 };
 
-colorButtons.forEach((button) => {
-    button.addEventListener("click", () => setSelectedColour(button));
-});
+const initColourPicker = (): void => {
+    if (colorButtons.length === 0) {
+        return;
+    }
 
-if (colorButtons.length > 0) {
+    colorButtons.forEach((button) => {
+        button.addEventListener("click", () => setSelectedColour(button));
+    });
+
     setSelectedColour(colorButtons[0]);
-}
+};
 
 const registerMovementHandlers = (): void => {
     document.addEventListener("keydown", (event: KeyboardEvent) => {
@@ -50,9 +56,17 @@ const resizeCanvas = (): void => {
     canvas.height = window.innerHeight;
 };
 
+const getPlayerConfig = (): PlayerConfig => {
+    const rawName = nameInput?.value.trim() ?? "";
+
+    return {
+        name: rawName.length > 0 ? rawName : DEFAULT_NAME,
+        colour: selectedColour,
+    };
+};
+
 const startGame = (): void => {
-    const name = nameInput?.value.trim() || "undefined";
-    const config: PlayerConfig = {name, colour: selectedColour};
+    const config = getPlayerConfig();
 
     menuOverlay?.classList.add("hidden");
     registerMovementHandlers();
@@ -62,6 +76,7 @@ const startGame = (): void => {
 };
 
 resizeCanvas();
+initColourPicker();
 window.addEventListener("resize", resizeCanvas);
 
 startButton?.addEventListener("click", startGame);

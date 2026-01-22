@@ -44,32 +44,10 @@ fun Application.configureSockets() {
                             applyPlayerConfig(player, config)
                             broadcastPlayers(jsonCodec)
                         }
+
                         "input" -> {
-                            val movementInput = decodeMovementInput(jsonCodec, payload, application) ?: continue
-                            player.update(movementInput)
-
-                            val eliminatedPlayers = handlePlayerCollisions(player)
-                            for (eliminatedId in eliminatedPlayers) {
-                                SessionRegistry.getSession(eliminatedId)?.close(
-                                    CloseReason(CloseReason.Codes.NORMAL, "Collided")
-                                )
-                                SessionRegistry.removeSession(eliminatedId)
-                                PlayerRepository.removePlayer(eliminatedId)
-                            }
-                            broadcastPlayers(jsonCodec)
-
-                            if (eliminatedPlayers.contains(player.id)) {
-                                break
-                            }
-
-                            val updatedDots = Dots.tick().associateBy { it.id }.toMutableMap()
-                            val collisionDots = handleDotCollisions(player)
-                            for (dot in collisionDots) {
-                                updatedDots[dot.id] = dot
-                            }
-                            if (updatedDots.isNotEmpty()) {
-                                broadcastDots(jsonCodec, updatedDots.values.toList())
-                            }
+                            val eliminated = handleMovementPayload(jsonCodec, payload, application, player)
+                            if (eliminated) break
                         }
                     }
                 }
@@ -139,6 +117,49 @@ internal fun applyPlayerConfig(player: Player, config: PlayerConfigInput) {
     }
 }
 
+private suspend fun handleMovementPayload(
+    jsonCodec: Json, payload: String, application: Application, player: Player
+): Boolean {
+    val movementInput = decodeMovementInput(jsonCodec, payload, application) ?: return false
+    player.update(movementInput)
+
+    val eliminatedPlayers = handlePlayerCollisions(player)
+    removeEliminatedPlayers(eliminatedPlayers)
+    broadcastPlayers(jsonCodec)
+
+    if (eliminatedPlayers.contains(player.id)) {
+        return true
+    }
+
+    val updatedDots = updateDotsForPlayer(player)
+    if (updatedDots.isNotEmpty()) {
+        broadcastDots(jsonCodec, updatedDots)
+    }
+
+    return false
+}
+
+private suspend fun removeEliminatedPlayers(eliminatedPlayers: Set<String>) {
+    for (eliminatedId in eliminatedPlayers) {
+        SessionRegistry.getSession(eliminatedId)?.close(
+            CloseReason(CloseReason.Codes.NORMAL, "Collided")
+        )
+        SessionRegistry.removeSession(eliminatedId)
+        PlayerRepository.removePlayer(eliminatedId)
+    }
+}
+
+private fun updateDotsForPlayer(player: Player): List<Dot> {
+    val updatedDots = Dots.tick().associateBy { it.id }.toMutableMap()
+    val collisionDots = handleDotCollisions(player)
+
+    for (dot in collisionDots) {
+        updatedDots[dot.id] = dot
+    }
+
+    return updatedDots.values.toList()
+}
+
 /**
  * Broadcasts the latest player positions to all connected sessions.
  */
@@ -155,15 +176,4 @@ internal suspend fun broadcastDots(jsonCodec: Json, updatedDots: List<Dot>) {
     for (session in SessionRegistry.getSessions()) {
         session.send(Frame.Text(updateDotsMessage))
     }
-}
-
-internal suspend fun handleDotCollisions(jsonCodec: Json, player: Player){
-    val dots = Dots.allDots
-    var scoreAdd = 0
-    for (dot in dots) {
-        if (dotCollision(player, dot)) {
-            scoreAdd += dot.radius
-        }
-    }
-    player.radius += scoreAdd
 }

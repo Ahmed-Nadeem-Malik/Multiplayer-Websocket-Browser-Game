@@ -16,6 +16,59 @@ export type PlayerConfig = {
     colour: string;
 };
 
+const isSocketActive = (): boolean => {
+    return !!socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING);
+};
+
+const sendConfig = (): void => {
+    if (!socket || !playerConfig) {
+        return;
+    }
+
+    socket.send(JSON.stringify({type: "InitConfig", ...playerConfig}));
+};
+
+const updateLocalPlayer = (players: Record<string, PlayerSnapshot>): void => {
+    const localId = localPlayer.getId();
+    if (!localId) {
+        return;
+    }
+
+    const snapshot = players[localId];
+    if (snapshot) {
+        localPlayer.applySnapshot(snapshot);
+    }
+};
+
+const handlePlayersSnapshot = (players: Record<string, PlayerSnapshot>): void => {
+    playerRegistry.applySnapshot(players);
+    updateLocalPlayer(players);
+};
+
+const handleServerMessage = (message: ServerMessage): void => {
+    switch (message.type) {
+        case "InitPlayer":
+            localPlayer.applySnapshot(message.player);
+            break;
+        case "InitPlayers":
+            handlePlayersSnapshot(message.players);
+            break;
+        case "UpdatePlayers":
+            handlePlayersSnapshot(message.players);
+            break;
+        case "InitDots":
+            dotRegistry.applySnapshot(message.dots);
+            break;
+        case "UpdateDots":
+            dotRegistry.applyUpdates(message.dots);
+            break;
+    }
+};
+
+const scheduleReconnect = (): void => {
+    setTimeout(() => connectWebSocket(), 1000);
+};
+
 /**
  * Connects to the WebSocket server and retries on close.
  */
@@ -24,11 +77,7 @@ export function connectWebSocket(config?: PlayerConfig): void {
         playerConfig = config;
     }
 
-    if (!playerConfig) {
-        return;
-    }
-
-    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+    if (!playerConfig || isSocketActive()) {
         return;
     }
 
@@ -36,48 +85,18 @@ export function connectWebSocket(config?: PlayerConfig): void {
 
     socket.addEventListener("open", () => {
         console.log("WebSocket connected");
-        socket?.send(JSON.stringify({type: "InitConfig", ...playerConfig}));
+        sendConfig();
     });
 
     socket.addEventListener("message", (event: MessageEvent) => {
         const message = JSON.parse(event.data as string) as ServerMessage;
-        switch (message.type) {
-            case "InitPlayer":
-                localPlayer.applySnapshot(message.player);
-                break;
-            case "InitPlayers":
-                playerRegistry.applySnapshot(message.players);
-                const localId = localPlayer.getId();
-                if (localId) {
-                    const snapshot = message.players[localId];
-                    if (snapshot) {
-                        localPlayer.applySnapshot(snapshot);
-                    }
-                }
-                break;
-            case "UpdatePlayers":
-                playerRegistry.applySnapshot(message.players);
-                const updatedLocalId = localPlayer.getId();
-                if (updatedLocalId) {
-                    const snapshot = message.players[updatedLocalId];
-                    if (snapshot) {
-                        localPlayer.applySnapshot(snapshot);
-                    }
-                }
-                break;
-            case "InitDots":
-                dotRegistry.applySnapshot(message.dots);
-                break;
-            case "UpdateDots":
-                dotRegistry.applyUpdates(message.dots);
-                break;
-        }
+        handleServerMessage(message);
     });
 
     socket.addEventListener("close", () => {
         console.log("WebSocket closed - reconnecting...");
         socket = null;
-        setTimeout(() => connectWebSocket(), 1000);
+        scheduleReconnect();
     });
 
     socket.addEventListener("error", () => {
