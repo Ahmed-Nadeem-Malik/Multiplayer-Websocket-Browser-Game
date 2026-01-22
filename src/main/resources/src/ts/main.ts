@@ -22,30 +22,41 @@ const startButton = document.getElementById("startButton") as HTMLButtonElement 
 const nameInput = document.getElementById("playerName") as HTMLInputElement | null;
 const colorButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".color-swatch"));
 
-let selectedColour = colorButtons[0]?.dataset.colour ?? "#B03030";
-let gameActive = false;
-let inputIntervalId: number | null = null;
-let renderLoopStarted = false;
-let eliminationInProgress = false;
-let eliminationStartTime: number | null = null;
-let frozenCameraPosition: CameraPosition | null = null;
-
-const setSelectedColour = (button: HTMLButtonElement): void => {
-    colorButtons.forEach((swatch) => swatch.classList.remove("selected"));
-    button.classList.add("selected");
-    selectedColour = button.dataset.colour ?? selectedColour;
+type EliminationState = {
+    inProgress: boolean;
+    startTime: number | null;
+    frozenCameraPosition: CameraPosition | null;
 };
+
+const gameState = {
+    active: false,
+    renderLoopStarted: false,
+    inputIntervalId: null as number | null,
+    elimination: {
+        inProgress: false,
+        startTime: null,
+        frozenCameraPosition: null,
+    } as EliminationState,
+};
+
+let selectedColour = colorButtons[0]?.dataset.colour ?? "#B03030";
 
 const initColourPicker = (): void => {
     if (colorButtons.length === 0) {
         return;
     }
 
+    const applySelection = (button: HTMLButtonElement): void => {
+        colorButtons.forEach((swatch) => swatch.classList.remove("selected"));
+        button.classList.add("selected");
+        selectedColour = button.dataset.colour ?? selectedColour;
+    };
+
     colorButtons.forEach((button) => {
-        button.addEventListener("click", () => setSelectedColour(button));
+        button.addEventListener("click", () => applySelection(button));
     });
 
-    setSelectedColour(colorButtons[0]);
+    applySelection(colorButtons[0]);
 };
 
 const resetMovementState = (): void => {
@@ -57,7 +68,7 @@ const resetMovementState = (): void => {
 
 const registerMovementHandlers = (): void => {
     document.addEventListener("keydown", (event: KeyboardEvent) => {
-        if (!gameActive) return;
+        if (!gameState.active) return;
         const key = event.key.toLowerCase();
         if (!isMovementKey(key)) return;
 
@@ -68,7 +79,7 @@ const registerMovementHandlers = (): void => {
     });
 
     document.addEventListener("keyup", (event: KeyboardEvent) => {
-        if (!gameActive) return;
+        if (!gameState.active) return;
         const key = event.key.toLowerCase();
         if (!isMovementKey(key)) return;
 
@@ -107,88 +118,96 @@ const hideMenu = (): void => {
 };
 
 const getCameraPosition = (): CameraPosition => {
-    if (eliminationInProgress && frozenCameraPosition) {
-        return frozenCameraPosition;
+    if (gameState.elimination.inProgress && gameState.elimination.frozenCameraPosition) {
+        return gameState.elimination.frozenCameraPosition;
     }
 
     return {x: localPlayer.getX(), y: localPlayer.getY()};
 };
 
 const getLocalPlayerAlpha = (): number => {
-    if (!eliminationInProgress || eliminationStartTime === null) {
+    if (!gameState.elimination.inProgress || gameState.elimination.startTime === null) {
         return 1;
     }
 
-    const elapsed = performance.now() - eliminationStartTime;
+    const elapsed = performance.now() - gameState.elimination.startTime;
     return Math.max(0, 1 - elapsed / ELIMINATION_FREEZE_MS);
 };
 
 const startRenderLoopOnce = (): void => {
-    if (renderLoopStarted) {
+    if (gameState.renderLoopStarted) {
         return;
     }
 
-    renderLoopStarted = true;
-    startRenderLoop(playerRegistry, dotRegistry, localPlayer, context, canvas, getCameraPosition, getLocalPlayerAlpha,);
+    gameState.renderLoopStarted = true;
+    startRenderLoop(
+        playerRegistry,
+        dotRegistry,
+        localPlayer,
+        context,
+        canvas,
+        getCameraPosition,
+        getLocalPlayerAlpha,
+    );
 };
 
-const ensureInputLoop = (): void => {
-    if (inputIntervalId !== null) {
+const startInputLoop = (): void => {
+    if (gameState.inputIntervalId !== null) {
         return;
     }
 
-    inputIntervalId = window.setInterval(sendInputState, 1);
+    gameState.inputIntervalId = window.setInterval(sendInputState, 1);
 };
 
 const stopInputLoop = (): void => {
-    if (inputIntervalId === null) {
+    if (gameState.inputIntervalId === null) {
         return;
     }
 
-    window.clearInterval(inputIntervalId);
-    inputIntervalId = null;
+    window.clearInterval(gameState.inputIntervalId);
+    gameState.inputIntervalId = null;
 };
 
 const startGame = (): void => {
     const config = getPlayerConfig();
 
-    eliminationInProgress = false;
-    eliminationStartTime = null;
-    frozenCameraPosition = null;
-    gameActive = true;
+    gameState.elimination.inProgress = false;
+    gameState.elimination.startTime = null;
+    gameState.elimination.frozenCameraPosition = null;
+    gameState.active = true;
     setReconnectEnabled(true);
     hideMenu();
     connectWebSocket(config);
-    ensureInputLoop();
+    startInputLoop();
     startRenderLoopOnce();
 };
 
 const handleElimination = (): void => {
-    if (eliminationInProgress) {
+    if (gameState.elimination.inProgress) {
         return;
     }
 
-    eliminationInProgress = true;
-    eliminationStartTime = performance.now();
-    gameActive = false;
-    frozenCameraPosition = {x: localPlayer.getX(), y: localPlayer.getY()};
+    gameState.elimination.inProgress = true;
+    gameState.elimination.startTime = performance.now();
+    gameState.elimination.frozenCameraPosition = {x: localPlayer.getX(), y: localPlayer.getY()};
+    gameState.active = false;
     resetMovementState();
     stopInputLoop();
     setReconnectEnabled(false);
 
     window.setTimeout(() => {
-        eliminationInProgress = false;
-        eliminationStartTime = null;
+        gameState.elimination.inProgress = false;
+        gameState.elimination.startTime = null;
         setMenuState("Play Again", "Play Again");
     }, ELIMINATION_FREEZE_MS);
 };
 
 const handleDisconnect = (): void => {
-    if (eliminationInProgress) {
+    if (gameState.elimination.inProgress) {
         return;
     }
 
-    gameActive = false;
+    gameState.active = false;
     resetMovementState();
     stopInputLoop();
     setReconnectEnabled(false);

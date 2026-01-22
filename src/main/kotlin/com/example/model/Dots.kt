@@ -2,10 +2,16 @@ package com.example.model
 
 import kotlinx.serialization.Serializable
 
+/**
+ * Manages the server-side dot collection and refresh schedule.
+ */
 object Dots {
     private var lastTick = 0L
     private val dotsById: MutableMap<Int, Dot> = mutableMapOf()
 
+    /**
+     * Returns a snapshot of all dots.
+     */
     val allDots: List<Dot>
         get() = dotsById.values.toList()
 
@@ -15,10 +21,22 @@ object Dots {
         }
     }
 
+    /**
+     * Checks whether enough time has passed to refresh dots.
+     *
+     * @param now current timestamp in milliseconds.
+     * @return true if a refresh should occur.
+     */
     fun needsUpdate(now: Long = System.currentTimeMillis()): Boolean {
         return now - lastTick >= DEFAULT_DOT_INTERVAL_MS
     }
 
+    /**
+     * Updates a subset of dots when the refresh interval passes.
+     *
+     * @param now current timestamp in milliseconds.
+     * @return dots that were updated.
+     */
     fun tick(now: Long = System.currentTimeMillis()): List<Dot> {
         if (!needsUpdate(now)) return emptyList()
         lastTick = now
@@ -28,6 +46,12 @@ object Dots {
         return updated
     }
 
+    /**
+     * Respawns a dot with a new randomized position.
+     *
+     * @param id identifier of the dot to respawn.
+     * @return the newly created dot instance.
+     */
     fun respawnDot(id: Int): Dot {
         val dot = Dot(id = id)
         dotsById[id] = dot
@@ -35,8 +59,20 @@ object Dots {
     }
 }
 
+/**
+ * Server message that initializes dot state for a client.
+ *
+ * @property type message discriminator.
+ * @property dots initial dot list.
+ */
 @Serializable
 data class InitDotsMessage(val type: String = "InitDots", val dots: List<Dot> = Dots.allDots)
 
+/**
+ * Server message that broadcasts updated dots.
+ *
+ * @property type message discriminator.
+ * @property dots updated dot list.
+ */
 @Serializable
 data class UpdateDotsMessage(val type: String = "UpdateDots", val dots: List<Dot>)

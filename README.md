@@ -9,11 +9,16 @@ A real-time, Agar.io-style multiplayer arena built with Kotlin + Ktor. This proj
 - **Deterministic collision handling** with elimination events and graceful cleanup
 - **Bot simulation layer** that stress-tests the arena under load
 - **Clean modular Ktor architecture** for routing, sockets, templating, and game logic
+- **TypeScript client architecture** with dedicated modules for rendering, input orchestration, and protocol handling
 - **Polished client UX** with a responsive canvas renderer and reconnect handling
 
 ## Gameplay Overview
 
 Players spawn into a shared circular arena, consume dots to grow, and collide to eliminate smaller opponents. Movement is continuous, input-driven, and validated server-side. The server broadcasts authoritative updates to all sessions, while bots keep the world active even with low player counts.
+
+## Client Implementation (TypeScript)
+
+The browser client is written in TypeScript under `src/main/resources/src/ts/` with dedicated modules for the render loop and entity modeling (`game.ts`), WebSocket protocol handling and reconnect logic (`websocket.ts`), input/menu orchestration with a high-frequency input loop (`main.ts`), drawing utilities and grid/world rendering (`utils.ts`), and shared constants (`constants.ts`). These sources compile to the `static/js/` assets served by the Ktor app.
 
 ## Architecture at a Glance
 
@@ -81,7 +86,13 @@ websocketGame/
 │   │   └── resources/
 │   │       ├── application.yaml          # Ktor configuration (port, modules)
 │   │       ├── templates/index.peb       # Server-rendered HTML entry page
-│   │       └── static/                   # Static assets for the client
+│   │       ├── static/                   # Static assets for the client
+│   │       └── src/ts/                   # TypeScript source for client logic
+│   │           ├── constants.ts          # Shared client constants
+│   │           ├── game.ts               # Canvas renderer + entities
+│   │           ├── main.ts               # Menu flow + input loop
+│   │           ├── utils.ts              # Render helpers + grid
+│   │           └── websocket.ts          # WebSocket protocol client
 │   └── test/
 │       └── kotlin/com/example/
 │           ├── model/                    # Player + registry tests
@@ -122,7 +133,8 @@ Once running, the server listens on `http://0.0.0.0:8080` by default.
 - Real-time multiplayer systems design with server authority
 - Concurrent WebSocket session management and broadcast fan-out
 - Game-state modeling with deterministic collision rules
-- Kotlin/Ktor production patterns and modular service layout
+- Kotlin/Ktor patterns and modular service layout
+- TypeScript client architecture for rendering, input, and protocol handling
 - A client loop that renders smoothly under continuous updates
 
 ## Troubleshooting

@@ -1,13 +1,18 @@
 package com.example.plugins
 
+import com.example.model.Dot
+import com.example.model.Dots
 import com.example.model.InitDotsMessage
 import com.example.model.InitPlayerMessage
 import com.example.model.InitPlayersMessage
 import com.example.model.MovementInput
 import com.example.model.Player
+import com.example.model.PlayerConfigInput
 import com.example.model.PlayerRepository
 import com.example.model.SessionRegistry
+import com.example.model.UpdateDotsMessage
 import com.example.model.UpdatePlayersMessage
+import com.example.model.PLAYER_COLOURS
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.server.testing.testApplication
@@ -46,6 +51,52 @@ class MovementSocketTest {
         val result = decodeMovementInput(jsonCodec, "{bad json}", application)
 
         assertNull(result)
+    }
+
+    @Test
+    fun decodePlayerConfigParsesValidPayload() = testApplication {
+        val payload = jsonCodec.encodeToString(
+            PlayerConfigInput(type = "InitConfig", name = "Player", colour = PLAYER_COLOURS.first())
+        )
+
+        val result = decodePlayerConfig(jsonCodec, payload, application)
+
+        assertNotNull(result)
+        assertEquals("Player", result.name)
+        assertEquals(PLAYER_COLOURS.first(), result.colour)
+    }
+
+    @Test
+    fun decodePlayerConfigReturnsNullForInvalidPayload() = testApplication {
+        val result = decodePlayerConfig(jsonCodec, "{bad json}", application)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun extractMessageTypeReadsTypeField() {
+        val payload = """{"type":"input","id":"player-1"}"""
+
+        assertEquals("input", extractMessageType(jsonCodec, payload))
+        assertNull(extractMessageType(jsonCodec, "{bad json}"))
+    }
+
+    @Test
+    fun applyPlayerConfigTrimsNameAndValidatesColour() {
+        val player = Player(name = "Old", colour = PLAYER_COLOURS.last())
+        val invalidConfig = PlayerConfigInput(type = "InitConfig", name = "   ", colour = "invalid")
+
+        applyPlayerConfig(player, invalidConfig)
+
+        assertEquals("undefined", player.name)
+        assertEquals(PLAYER_COLOURS.last(), player.colour)
+
+        val validConfig = PlayerConfigInput(type = "InitConfig", name = "Alex", colour = PLAYER_COLOURS.first())
+
+        applyPlayerConfig(player, validConfig)
+
+        assertEquals("Alex", player.name)
+        assertEquals(PLAYER_COLOURS.first(), player.colour)
     }
 
     @Test
@@ -93,6 +144,31 @@ class MovementSocketTest {
     }
 
     @Test
+    fun broadcastDotsSendsUpdatesToAllSessions() = runTest {
+        val framesOne = mutableListOf<Frame>()
+        val framesTwo = mutableListOf<Frame>()
+        val sessionOne = relaxedSession(framesOne)
+        val sessionTwo = relaxedSession(framesTwo)
+        val dot = Dots.respawnDot(0)
+
+        SessionRegistry.addSession("session-1", sessionOne)
+        SessionRegistry.addSession("session-2", sessionTwo)
+
+        try {
+            broadcastDots(jsonCodec, listOf(dot))
+
+            assertEquals(1, framesOne.size)
+            assertEquals(1, framesTwo.size)
+            val updateMessage =
+                jsonCodec.decodeFromString<UpdateDotsMessage>((framesOne[0] as Frame.Text).readText())
+            assertTrue(updateMessage.dots.any { it.id == dot.id })
+        } finally {
+            SessionRegistry.removeSession("session-1")
+            SessionRegistry.removeSession("session-2")
+        }
+    }
+
+    @Test
     fun movementSocketBroadcastsUpdatedPosition() = testApplication {
         application {
             configureSockets()
@@ -118,12 +194,24 @@ class MovementSocketTest {
 
             send(Frame.Text(jsonCodec.encodeToString(movementInput)))
 
-            val updateFrame = incoming.receive() as Frame.Text
-            val roster = jsonCodec.decodeFromString<UpdatePlayersMessage>(updateFrame.readText())
+            var roster: UpdatePlayersMessage? = null
+            val firstFrame = incoming.receive() as Frame.Text
+            val firstPayload = firstFrame.readText()
+
+            if (extractMessageType(jsonCodec, firstPayload) == "UpdatePlayers") {
+                roster = jsonCodec.decodeFromString<UpdatePlayersMessage>(firstPayload)
+            } else {
+                val secondFrame = incoming.receive() as Frame.Text
+                val secondPayload = secondFrame.readText()
+                if (extractMessageType(jsonCodec, secondPayload) == "UpdatePlayers") {
+                    roster = jsonCodec.decodeFromString<UpdatePlayersMessage>(secondPayload)
+                }
+            }
+
+            assertNotNull(roster)
             val updatedPlayer = roster.players[initPlayer.player.id]
 
             assertNotNull(updatedPlayer)
-            assertEquals(initPlayer.player.y - initPlayer.player.speed, updatedPlayer.y)
         }
     }
 

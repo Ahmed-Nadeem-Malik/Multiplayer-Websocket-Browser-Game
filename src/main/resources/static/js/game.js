@@ -1,5 +1,7 @@
 import { DOT_OPACITY, DOT_RADIUS, PLAYER_OPACITY } from "./constants.js";
-export const movementState = { w: false, a: false, s: false, d: false };
+export const movementState = {
+    w: false, a: false, s: false, d: false,
+};
 export const canvas = document.getElementById("gameCanvas");
 export const context = canvas.getContext("2d");
 export class Player {

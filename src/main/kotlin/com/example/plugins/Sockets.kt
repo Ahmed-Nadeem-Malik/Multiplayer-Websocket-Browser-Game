@@ -15,6 +15,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * Delay before closing eliminated player sessions.
+ */
 private const val ELIMINATION_DELAY_MS = 3000L
 
 /**
@@ -41,23 +44,7 @@ fun Application.configureSockets() {
             sendInitialState(jsonCodec, player)
 
             try {
-                for (frame in incoming) {
-                    if (frame !is Frame.Text) continue
-                    val payload = frame.readText()
-                    when (extractMessageType(jsonCodec, payload)) {
-                        "InitConfig" -> {
-                            val config = decodePlayerConfig(jsonCodec, payload, application) ?: continue
-                            applyPlayerConfig(player, config)
-                            broadcastPlayers(jsonCodec)
-                        }
-
-                        "input" -> {
-                            val eliminated =
-                                handleMovementPayload(jsonCodec, payload, application, player, sessionScope)
-                            if (eliminated) break
-                        }
-                    }
-                }
+                handleIncomingFrames(jsonCodec, application, player, sessionScope)
             } catch (exception: Throwable) {
                 application.log.warn("Unknown error", exception)
             } finally {
@@ -70,7 +57,40 @@ fun Application.configureSockets() {
 }
 
 /**
+ * Consumes incoming WebSocket frames and dispatches game updates.
+ *
+ * @param jsonCodec configured JSON serializer.
+ * @param application application logger owner.
+ * @param player current player for the session.
+ * @param sessionScope scope for delayed session closes.
+ */
+private suspend fun DefaultWebSocketServerSession.handleIncomingFrames(
+    jsonCodec: Json, application: Application, player: Player, sessionScope: CoroutineScope
+) {
+    for (frame in incoming) {
+        if (frame !is Frame.Text) continue
+
+        val payload = frame.readText()
+        when (extractMessageType(jsonCodec, payload)) {
+            "InitConfig" -> {
+                val config = decodePlayerConfig(jsonCodec, payload, application) ?: continue
+                applyPlayerConfig(player, config)
+                broadcastPlayers(jsonCodec)
+            }
+
+            "input" -> {
+                val eliminated = handleMovementPayload(jsonCodec, payload, application, player, sessionScope)
+                if (eliminated) break
+            }
+        }
+    }
+}
+
+/**
  * Sends initial player identity and world state to the new session.
+ *
+ * @param jsonCodec configured JSON serializer.
+ * @param player newly connected player.
  */
 internal suspend fun DefaultWebSocketServerSession.sendInitialState(jsonCodec: Json, player: Player) {
     val initPlayerMessage = jsonCodec.encodeToString(InitPlayerMessage(type = "InitPlayer", player))
@@ -84,6 +104,11 @@ internal suspend fun DefaultWebSocketServerSession.sendInitialState(jsonCodec: J
 
 /**
  * Decodes movement input JSON payloads from the client.
+ *
+ * @param jsonCodec configured JSON serializer.
+ * @param payload raw message payload.
+ * @param application application logger owner.
+ * @return decoded input or null when invalid.
  */
 internal fun decodeMovementInput(
     jsonCodec: Json, payload: String, application: Application
@@ -96,6 +121,14 @@ internal fun decodeMovementInput(
     }
 }
 
+/**
+ * Decodes player configuration payloads from the client.
+ *
+ * @param jsonCodec configured JSON serializer.
+ * @param payload raw message payload.
+ * @param application application logger owner.
+ * @return decoded configuration or null when invalid.
+ */
 internal fun decodePlayerConfig(
     jsonCodec: Json, payload: String, application: Application
 ): PlayerConfigInput? {
@@ -107,6 +140,13 @@ internal fun decodePlayerConfig(
     }
 }
 
+/**
+ * Extracts the message type string from a payload.
+ *
+ * @param jsonCodec configured JSON serializer.
+ * @param payload raw message payload.
+ * @return the type field when present.
+ */
 internal fun extractMessageType(jsonCodec: Json, payload: String): String? {
     return try {
         jsonCodec.parseToJsonElement(payload).jsonObject["type"]?.jsonPrimitive?.content
@@ -115,6 +155,12 @@ internal fun extractMessageType(jsonCodec: Json, payload: String): String? {
     }
 }
 
+/**
+ * Applies player configuration values after validation.
+ *
+ * @param player player to update.
+ * @param config requested configuration.
+ */
 internal fun applyPlayerConfig(player: Player, config: PlayerConfigInput) {
     val trimmedName = config.name.trim()
     player.name = trimmedName.ifEmpty { "undefined" }
@@ -124,6 +170,16 @@ internal fun applyPlayerConfig(player: Player, config: PlayerConfigInput) {
     }
 }
 
+/**
+ * Handles movement input, broadcasts updates, and schedules eliminations.
+ *
+ * @param jsonCodec configured JSON serializer.
+ * @param payload raw message payload.
+ * @param application application logger owner.
+ * @param player player issuing the movement.
+ * @param sessionScope scope for delayed session closes.
+ * @return true when the current player was eliminated.
+ */
 private suspend fun handleMovementPayload(
     jsonCodec: Json, payload: String, application: Application, player: Player, sessionScope: CoroutineScope
 ): Boolean {
@@ -134,7 +190,9 @@ private suspend fun handleMovementPayload(
     val updatedDots = updateDotsForPlayer(player)
 
     if (eliminatedPlayers.isNotEmpty()) {
-        removePlayersFromRepository(eliminatedPlayers)
+        for (eliminatedId in eliminatedPlayers) {
+            PlayerRepository.removePlayer(eliminatedId)
+        }
     }
 
     broadcastPlayers(jsonCodec)
@@ -143,38 +201,31 @@ private suspend fun handleMovementPayload(
     }
 
     if (eliminatedPlayers.isNotEmpty()) {
-        notifyEliminatedPlayers(jsonCodec, eliminatedPlayers)
+        for (eliminatedId in eliminatedPlayers) {
+            val eliminatedMessage = jsonCodec.encodeToString(EliminatedMessage(playerId = eliminatedId))
+            SessionRegistry.getSession(eliminatedId)?.send(Frame.Text(eliminatedMessage))
+        }
+
         sessionScope.launch {
             delay(ELIMINATION_DELAY_MS)
-            closeEliminatedSessions(eliminatedPlayers)
+            for (eliminatedId in eliminatedPlayers) {
+                SessionRegistry.getSession(eliminatedId)?.close(
+                    CloseReason(CloseReason.Codes.NORMAL, "Collided")
+                )
+                SessionRegistry.removeSession(eliminatedId)
+            }
         }
     }
 
     return eliminatedPlayers.contains(player.id)
 }
 
-private fun removePlayersFromRepository(eliminatedPlayers: Set<String>) {
-    for (eliminatedId in eliminatedPlayers) {
-        PlayerRepository.removePlayer(eliminatedId)
-    }
-}
-
-private suspend fun notifyEliminatedPlayers(jsonCodec: Json, eliminatedPlayers: Set<String>) {
-    for (eliminatedId in eliminatedPlayers) {
-        val eliminatedMessage = jsonCodec.encodeToString(EliminatedMessage(playerId = eliminatedId))
-        SessionRegistry.getSession(eliminatedId)?.send(Frame.Text(eliminatedMessage))
-    }
-}
-
-private suspend fun closeEliminatedSessions(eliminatedPlayers: Set<String>) {
-    for (eliminatedId in eliminatedPlayers) {
-        SessionRegistry.getSession(eliminatedId)?.close(
-            CloseReason(CloseReason.Codes.NORMAL, "Collided")
-        )
-        SessionRegistry.removeSession(eliminatedId)
-    }
-}
-
+/**
+ * Updates dots for a player tick, including collisions.
+ *
+ * @param player player for collision checks.
+ * @return dots that changed state.
+ */
 private fun updateDotsForPlayer(player: Player): List<Dot> {
     val updatedDots = Dots.tick().associateBy { it.id }.toMutableMap()
     val collisionDots = handleDotCollisions(player)
@@ -188,6 +239,8 @@ private fun updateDotsForPlayer(player: Player): List<Dot> {
 
 /**
  * Broadcasts the latest player positions to all connected sessions.
+ *
+ * @param jsonCodec configured JSON serializer.
  */
 internal suspend fun broadcastPlayers(jsonCodec: Json) {
     val updatePlayersMessage =
@@ -197,6 +250,12 @@ internal suspend fun broadcastPlayers(jsonCodec: Json) {
     }
 }
 
+/**
+ * Broadcasts updated dots to all connected sessions.
+ *
+ * @param jsonCodec configured JSON serializer.
+ * @param updatedDots dots that changed since last tick.
+ */
 internal suspend fun broadcastDots(jsonCodec: Json, updatedDots: List<Dot>) {
     val updateDotsMessage = jsonCodec.encodeToString(UpdateDotsMessage(type = "UpdateDots", dots = updatedDots))
     for (session in SessionRegistry.getSessions()) {

@@ -7,6 +7,13 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/**
+ * Represents a collectible dot in the world.
+ *
+ * @property id unique identifier for the dot.
+ * @property colour current dot color.
+ * @property radius collision radius for the dot.
+ */
 @Serializable
 data class Dot(
     val id: Int,
@@ -22,6 +29,9 @@ data class Dot(
         y = ny
     }
 
+    /**
+     * Refreshes the dot position using a randomized point in the world.
+     */
     fun update() {
         val (nx, ny) = randomXY()
         x = nx
@@ -29,6 +39,11 @@ data class Dot(
     }
 
     companion object {
+        /**
+         * Generates a random coordinate inside the world circle.
+         *
+         * @return a pair of x/y coordinates.
+         */
         private fun randomXY(): Pair<Int, Int> {
             val angle = Random.nextDouble(0.0, 2 * PI)
             val radius = WORLD_RADIUS * sqrt(Random.nextDouble(0.0, 1.0))

@@ -20,7 +20,9 @@ class PlayerTest {
 
     @Test
     fun updateClampsPlayerToWorldRadius() {
-        val player = Player(x = 7000, y = 3000)
+        val player = Player()
+        player.x = 7000
+        player.y = 3000
         val input = MovementInput(type = "input", id = player.id, w = false, a = false, s = false, d = false)
 
         player.update(input)
