@@ -18,8 +18,8 @@ Players spawn into a shared circular arena, consume dots to grow, and collide to
 ## Architecture at a Glance
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Ktor Server                             │
+┌──────────────────────────────────────────────────────────────────┐
+│                         Ktor Server                              │
 ├──────────────────────┬───────────────────────┬───────────────────┤
 │   WebSocket Layer    │   Game State Engine   │   HTTP Routing    │
 │                      │                       │                   │
