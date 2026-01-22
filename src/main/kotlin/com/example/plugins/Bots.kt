@@ -48,11 +48,13 @@ fun Application.configureBots() {
                 }
             }
 
-            removeEliminatedBots(bots, eliminatedPlayers)
-
             broadcastPlayers(jsonCodec)
             if (updatedDots.isNotEmpty()) {
                 broadcastDots(jsonCodec, updatedDots.values.toList())
+            }
+
+            if (eliminatedPlayers.isNotEmpty()) {
+                removeEliminatedBots(bots, eliminatedPlayers)
             }
         }
     }

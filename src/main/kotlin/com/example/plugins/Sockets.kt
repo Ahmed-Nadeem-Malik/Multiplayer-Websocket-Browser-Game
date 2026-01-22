@@ -6,11 +6,14 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.delay
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Duration.Companion.seconds
+
+private const val ELIMINATION_DELAY_MS = 3000L
 
 /**
  * Configures the WebSocket endpoint used for player movement updates.
@@ -110,7 +113,7 @@ internal fun extractMessageType(jsonCodec: Json, payload: String): String? {
 
 internal fun applyPlayerConfig(player: Player, config: PlayerConfigInput) {
     val trimmedName = config.name.trim()
-    player.name = if (trimmedName.isNotEmpty()) trimmedName else "undefined"
+    player.name = trimmedName.ifEmpty { "undefined" }
 
     if (PLAYER_COLOURS.contains(config.colour)) {
         player.colour = config.colour
@@ -124,28 +127,37 @@ private suspend fun handleMovementPayload(
     player.update(movementInput)
 
     val eliminatedPlayers = handlePlayerCollisions(player)
-    removeEliminatedPlayers(eliminatedPlayers)
-    broadcastPlayers(jsonCodec)
+    val updatedDots = updateDotsForPlayer(player)
 
-    if (eliminatedPlayers.contains(player.id)) {
-        return true
+    if (eliminatedPlayers.isNotEmpty()) {
+        removePlayersFromRepository(eliminatedPlayers)
     }
 
-    val updatedDots = updateDotsForPlayer(player)
+    broadcastPlayers(jsonCodec)
     if (updatedDots.isNotEmpty()) {
         broadcastDots(jsonCodec, updatedDots)
     }
 
-    return false
+    if (eliminatedPlayers.isNotEmpty()) {
+        delay(ELIMINATION_DELAY_MS)
+        closeEliminatedSessions(eliminatedPlayers)
+    }
+
+    return eliminatedPlayers.contains(player.id)
 }
 
-private suspend fun removeEliminatedPlayers(eliminatedPlayers: Set<String>) {
+private fun removePlayersFromRepository(eliminatedPlayers: Set<String>) {
+    for (eliminatedId in eliminatedPlayers) {
+        PlayerRepository.removePlayer(eliminatedId)
+    }
+}
+
+private suspend fun closeEliminatedSessions(eliminatedPlayers: Set<String>) {
     for (eliminatedId in eliminatedPlayers) {
         SessionRegistry.getSession(eliminatedId)?.close(
             CloseReason(CloseReason.Codes.NORMAL, "Collided")
         )
         SessionRegistry.removeSession(eliminatedId)
-        PlayerRepository.removePlayer(eliminatedId)
     }
 }
 

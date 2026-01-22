@@ -2,9 +2,22 @@ import { Dots, movementState, Player, Players } from "./game.js";
 const webSocketUrl = "ws://localhost:8080/movement";
 let socket = null;
 let playerConfig = null;
+let reconnectEnabled = true;
+let disconnectHandler = null;
+let eliminationHandler = null;
+let eliminationNotified = false;
 export const localPlayer = new Player();
 export const playerRegistry = new Players();
 export const dotRegistry = new Dots();
+export const setReconnectEnabled = (enabled) => {
+    reconnectEnabled = enabled;
+};
+export const setDisconnectHandler = (handler) => {
+    disconnectHandler = handler;
+};
+export const setEliminationHandler = (handler) => {
+    eliminationHandler = handler;
+};
 const isSocketActive = () => {
     return !!socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING);
 };
@@ -21,7 +34,13 @@ const updateLocalPlayer = (players) => {
     }
     const snapshot = players[localId];
     if (snapshot) {
+        eliminationNotified = false;
         localPlayer.applySnapshot(snapshot);
+        return;
+    }
+    if (!eliminationNotified) {
+        eliminationNotified = true;
+        eliminationHandler?.();
     }
 };
 const handlePlayersSnapshot = (players) => {
@@ -72,7 +91,13 @@ export function connectWebSocket(config) {
     socket.addEventListener("close", () => {
         console.log("WebSocket closed - reconnecting...");
         socket = null;
-        scheduleReconnect();
+        disconnectHandler?.();
+        if (reconnectEnabled) {
+            scheduleReconnect();
+        }
+        else {
+            playerConfig = null;
+        }
     });
     socket.addEventListener("error", () => {
         console.log("WebSocket error");

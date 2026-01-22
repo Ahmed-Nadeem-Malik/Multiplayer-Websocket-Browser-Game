@@ -9,7 +9,7 @@
 
 <div id="menuOverlay" class="menu-overlay">
     <div class="menu-card">
-        <h1 class="menu-title">Join Game</h1>
+        <h1 class="menu-title" id="menuTitle">Join Game</h1>
         <label class="menu-label" for="playerName">Name</label>
         <input id="playerName" class="menu-input" type="text" placeholder="undefined" maxlength="24">
         <div class="menu-label">Colour</div>

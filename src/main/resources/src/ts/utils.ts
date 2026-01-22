@@ -9,10 +9,11 @@ import {
     WORLD_RADIUS,
 } from "./constants.js";
 
+export type CameraPosition = { x: number; y: number };
+
 export function isMovementKey(key: string): key is keyof MovementState {
     return key === "w" || key === "a" || key === "s" || key === "d";
 }
-
 
 export function startRenderLoop(
     playerRegistry: Players,
@@ -20,12 +21,15 @@ export function startRenderLoop(
     localPlayer: Player,
     renderContext: CanvasRenderingContext2D,
     gameCanvas: HTMLCanvasElement,
+    getCameraPosition: () => CameraPosition,
+    getLocalPlayerAlpha: () => number,
 ): void {
     const loop = (): void => {
         renderContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
-        const cameraX = localPlayer.getX() - gameCanvas.width / 2;
-        const cameraY = localPlayer.getY() - gameCanvas.height / 2;
+        const cameraTarget = getCameraPosition();
+        const cameraX = cameraTarget.x - gameCanvas.width / 2;
+        const cameraY = cameraTarget.y - gameCanvas.height / 2;
 
         renderContext.save();
         renderContext.translate(-cameraX, -cameraY);
@@ -33,7 +37,7 @@ export function startRenderLoop(
         drawGrid(renderContext, cameraX, cameraY, gameCanvas.width, gameCanvas.height);
         drawWorldBorder(renderContext);
         drawDots(dotRegistry);
-        drawPlayers(playerRegistry, localPlayer);
+        drawPlayers(playerRegistry, localPlayer, getLocalPlayerAlpha());
 
         renderContext.restore();
         requestAnimationFrame(loop);
@@ -42,7 +46,7 @@ export function startRenderLoop(
     requestAnimationFrame(loop);
 }
 
-function drawPlayers(playerRegistry: Players, localPlayer: Player): void {
+function drawPlayers(playerRegistry: Players, localPlayer: Player, localPlayerAlpha: number): void {
     const localId = localPlayer.getId();
     for (const [playerId, currentPlayer] of Object.entries(playerRegistry.getAll())) {
         if (localId && playerId === localId) {
@@ -51,7 +55,9 @@ function drawPlayers(playerRegistry: Players, localPlayer: Player): void {
         currentPlayer.draw();
     }
 
-    localPlayer.draw();
+    if (localPlayerAlpha > 0) {
+        localPlayer.draw(localPlayerAlpha);
+    }
 }
 
 function drawDots(dotRegistry: Dots): void {
@@ -68,7 +74,13 @@ function drawWorldBorder(renderContext: CanvasRenderingContext2D): void {
     renderContext.stroke();
 }
 
-function drawGrid(renderContext: CanvasRenderingContext2D, cameraX: number, cameraY: number, viewportWidth: number, viewportHeight: number): void {
+function drawGrid(
+    renderContext: CanvasRenderingContext2D,
+    cameraX: number,
+    cameraY: number,
+    viewportWidth: number,
+    viewportHeight: number,
+): void {
     const startX = Math.floor(cameraX / GRID_SIZE) * GRID_SIZE;
     const startY = Math.floor(cameraY / GRID_SIZE) * GRID_SIZE;
     const endX = cameraX + viewportWidth;

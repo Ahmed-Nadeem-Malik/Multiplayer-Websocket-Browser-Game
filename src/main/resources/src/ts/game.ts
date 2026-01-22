@@ -48,14 +48,16 @@ export class Player {
         return this.y;
     }
 
-    public draw(): void {
+    public draw(alphaMultiplier: number = 1): void {
+        const clampedAlpha = Math.max(0, Math.min(1, alphaMultiplier));
+
         context.save();
         context.beginPath();
         context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         context.fillStyle = this.colour;
-        context.globalAlpha = PLAYER_OPACITY;
+        context.globalAlpha = PLAYER_OPACITY * clampedAlpha;
         context.fill();
-        context.globalAlpha = 1;
+        context.globalAlpha = clampedAlpha;
         if (this.name) {
             context.fillStyle = "#000000";
             context.font = `${Math.max(12, Math.floor(this.radius / 2))}px sans-serif`;

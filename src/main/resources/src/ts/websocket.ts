@@ -4,6 +4,10 @@ const webSocketUrl = "ws://localhost:8080/movement";
 
 let socket: WebSocket | null = null;
 let playerConfig: PlayerConfig | null = null;
+let reconnectEnabled = true;
+let disconnectHandler: (() => void) | null = null;
+let eliminationHandler: (() => void) | null = null;
+let eliminationNotified = false;
 
 export const localPlayer = new Player();
 
@@ -14,6 +18,18 @@ export const dotRegistry = new Dots();
 export type PlayerConfig = {
     name: string;
     colour: string;
+};
+
+export const setReconnectEnabled = (enabled: boolean): void => {
+    reconnectEnabled = enabled;
+};
+
+export const setDisconnectHandler = (handler: (() => void) | null): void => {
+    disconnectHandler = handler;
+};
+
+export const setEliminationHandler = (handler: (() => void) | null): void => {
+    eliminationHandler = handler;
 };
 
 const isSocketActive = (): boolean => {
@@ -36,7 +52,14 @@ const updateLocalPlayer = (players: Record<string, PlayerSnapshot>): void => {
 
     const snapshot = players[localId];
     if (snapshot) {
+        eliminationNotified = false;
         localPlayer.applySnapshot(snapshot);
+        return;
+    }
+
+    if (!eliminationNotified) {
+        eliminationNotified = true;
+        eliminationHandler?.();
     }
 };
 
@@ -96,7 +119,13 @@ export function connectWebSocket(config?: PlayerConfig): void {
     socket.addEventListener("close", () => {
         console.log("WebSocket closed - reconnecting...");
         socket = null;
-        scheduleReconnect();
+        disconnectHandler?.();
+
+        if (reconnectEnabled) {
+            scheduleReconnect();
+        } else {
+            playerConfig = null;
+        }
     });
 
     socket.addEventListener("error", () => {

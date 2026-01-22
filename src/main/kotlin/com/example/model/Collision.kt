@@ -7,17 +7,29 @@ private fun hasCollision(dx: Int, dy: Int, radius: Int): Boolean {
 }
 
 fun dotCollision(player: Player, dot: Dot): Boolean {
+    if (player.radius <= dot.radius) {
+        return false
+    }
+
     val dx = dot.x - player.x
     val dy = dot.y - player.y
-    val radius = player.radius + dot.radius
+    val radius = player.radius - dot.radius
 
     return hasCollision(dx, dy, radius)
 }
 
 fun playerCollision(player: Player, other: Player): Boolean {
-    val dx = other.x - player.x
-    val dy = other.y - player.y
-    val radius = player.radius + other.radius
+    val (larger, smaller) = if (player.radius > other.radius) {
+        player to other
+    } else if (other.radius > player.radius) {
+        other to player
+    } else {
+        return false
+    }
+
+    val dx = smaller.x - larger.x
+    val dy = smaller.y - larger.y
+    val radius = larger.radius - smaller.radius
 
     return hasCollision(dx, dy, radius)
 }
