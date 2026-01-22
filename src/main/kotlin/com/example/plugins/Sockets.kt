@@ -8,6 +8,8 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -35,30 +37,40 @@ fun Application.configureSockets() {
             try {
                 for (frame in incoming) {
                     if (frame !is Frame.Text) continue
-                    val movementInput = decodeMovementInput(jsonCodec, frame.readText(), application) ?: continue
-                    player.update(movementInput)
+                    val payload = frame.readText()
+                    when (extractMessageType(jsonCodec, payload)) {
+                        "InitConfig" -> {
+                            val config = decodePlayerConfig(jsonCodec, payload, application) ?: continue
+                            applyPlayerConfig(player, config)
+                            broadcastPlayers(jsonCodec)
+                        }
+                        "input" -> {
+                            val movementInput = decodeMovementInput(jsonCodec, payload, application) ?: continue
+                            player.update(movementInput)
 
-                    val eliminatedPlayers = handlePlayerCollisions(player)
-                    for (eliminatedId in eliminatedPlayers) {
-                        SessionRegistry.getSession(eliminatedId)?.close(
-                            CloseReason(CloseReason.Codes.NORMAL, "Collided")
-                        )
-                        SessionRegistry.removeSession(eliminatedId)
-                        PlayerRepository.removePlayer(eliminatedId)
-                    }
-                    broadcastPlayers(jsonCodec)
+                            val eliminatedPlayers = handlePlayerCollisions(player)
+                            for (eliminatedId in eliminatedPlayers) {
+                                SessionRegistry.getSession(eliminatedId)?.close(
+                                    CloseReason(CloseReason.Codes.NORMAL, "Collided")
+                                )
+                                SessionRegistry.removeSession(eliminatedId)
+                                PlayerRepository.removePlayer(eliminatedId)
+                            }
+                            broadcastPlayers(jsonCodec)
 
-                    if (eliminatedPlayers.contains(player.id)) {
-                        break
-                    }
+                            if (eliminatedPlayers.contains(player.id)) {
+                                break
+                            }
 
-                    val updatedDots = Dots.tick().associateBy { it.id }.toMutableMap()
-                    val collisionDots = handleDotCollisions(player)
-                    for (dot in collisionDots) {
-                        updatedDots[dot.id] = dot
-                    }
-                    if (updatedDots.isNotEmpty()) {
-                        broadcastDots(jsonCodec, updatedDots.values.toList())
+                            val updatedDots = Dots.tick().associateBy { it.id }.toMutableMap()
+                            val collisionDots = handleDotCollisions(player)
+                            for (dot in collisionDots) {
+                                updatedDots[dot.id] = dot
+                            }
+                            if (updatedDots.isNotEmpty()) {
+                                broadcastDots(jsonCodec, updatedDots.values.toList())
+                            }
+                        }
                     }
                 }
             } catch (exception: Throwable) {
@@ -96,6 +108,34 @@ internal fun decodeMovementInput(
     } catch (_: SerializationException) {
         application.log.warn("Invalid movement payload; ignoring")
         null
+    }
+}
+
+internal fun decodePlayerConfig(
+    jsonCodec: Json, payload: String, application: Application
+): PlayerConfigInput? {
+    return try {
+        jsonCodec.decodeFromString<PlayerConfigInput>(payload)
+    } catch (_: SerializationException) {
+        application.log.warn("Invalid config payload; ignoring")
+        null
+    }
+}
+
+internal fun extractMessageType(jsonCodec: Json, payload: String): String? {
+    return try {
+        jsonCodec.parseToJsonElement(payload).jsonObject["type"]?.jsonPrimitive?.content
+    } catch (_: Exception) {
+        null
+    }
+}
+
+internal fun applyPlayerConfig(player: Player, config: PlayerConfigInput) {
+    val trimmedName = config.name.trim()
+    player.name = if (trimmedName.isNotEmpty()) trimmedName else "undefined"
+
+    if (PLAYER_COLOURS.contains(config.colour)) {
+        player.colour = config.colour
     }
 }
 

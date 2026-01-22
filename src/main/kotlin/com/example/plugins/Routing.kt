@@ -1,5 +1,6 @@
 package com.example.plugins
 
+import com.example.model.PLAYER_COLOURS
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.http.content.*
@@ -21,7 +22,8 @@ fun Application.configureRouting() {
             call.respond(
                 PebbleContent(
                     "index.peb", mapOf(
-                        "main" to "title", "name" to "Ahmed"
+                        "title" to "WebSocket Game",
+                        "playerColours" to PLAYER_COLOURS
                     )
                 )
             )

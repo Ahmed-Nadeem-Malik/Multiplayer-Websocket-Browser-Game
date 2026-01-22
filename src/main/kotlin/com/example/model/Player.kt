@@ -14,11 +14,12 @@ import kotlin.random.Random
 @Serializable
 data class Player(
     val id: String = UUID.randomUUID().toString(),
+    var name: String = "undefined",
     var x: Int = DEFAULT_X,
     var y: Int = DEFAULT_Y,
     val speed: Int = DEFAULT_SPEED,
     var radius: Int = PLAYER_RADIUS,
-    val colour: String = randomColour()
+    var colour: String = randomColour()
 ) {
     init {
         val (nx, ny) = randomXY()
@@ -61,9 +62,15 @@ data class Player(
 }
 
 @Serializable
-data class MovementInput(
-    val type: String, val id: String, val w: Boolean, val a: Boolean, val s: Boolean, val d: Boolean
-)
+ data class MovementInput(
+     val type: String, val id: String, val w: Boolean, val a: Boolean, val s: Boolean, val d: Boolean
+ )
+
+@Serializable
+ data class PlayerConfigInput(
+     val type: String, val name: String, val colour: String
+ )
+
 
 /**
  * Server message that initializes the local player state.

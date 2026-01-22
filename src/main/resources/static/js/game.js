@@ -1,12 +1,13 @@
-import { DOT_OPACITY, DOT_RADIUS, PLAYER_OPACITY, PLAYER_RADIUS } from "./constants.js";
+import { DOT_OPACITY, DOT_RADIUS, PLAYER_OPACITY } from "./constants.js";
 export const movementState = { w: false, a: false, s: false, d: false };
 export const canvas = document.getElementById("gameCanvas");
 export const context = canvas.getContext("2d");
 export class Player {
     constructor() {
+        this.name = "undefined";
         this.x = 500;
         this.y = 500;
-        this.radius = PLAYER_RADIUS;
+        this.radius = 0;
         this.colour = "#1F51FF";
     }
     applySnapshot(snapshot) {
@@ -28,6 +29,14 @@ export class Player {
         context.fillStyle = this.colour;
         context.globalAlpha = PLAYER_OPACITY;
         context.fill();
+        context.globalAlpha = 1;
+        if (this.name) {
+            context.fillStyle = "#000000";
+            context.font = `${Math.max(12, Math.floor(this.radius / 2))}px sans-serif`;
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.fillText(this.name, this.x, this.y);
+        }
         context.restore();
     }
 }
@@ -53,6 +62,7 @@ export class Dot {
         this.id = 0;
         this.x = 0;
         this.y = 0;
+        this.radius = 0;
         this.colour = "#FFFFFF";
     }
     applySnapshot(snapshot) {
@@ -73,7 +83,7 @@ export class Dot {
     draw() {
         context.save();
         context.beginPath();
-        context.arc(this.x, this.y, DOT_RADIUS, 0, Math.PI * 2);
+        context.arc(this.x, this.y, this.radius || DOT_RADIUS, 0, Math.PI * 2);
         context.fillStyle = this.colour;
         context.globalAlpha = DOT_OPACITY;
         context.fill();

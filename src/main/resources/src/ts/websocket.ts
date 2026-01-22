@@ -3,6 +3,7 @@ import {Dots, DotSnapshot, movementState, Player, Players, PlayerSnapshot} from 
 const webSocketUrl = "ws://localhost:8080/movement";
 
 let socket: WebSocket | null = null;
+let playerConfig: PlayerConfig | null = null;
 
 export const localPlayer = new Player();
 
@@ -10,10 +11,23 @@ export const playerRegistry = new Players();
 
 export const dotRegistry = new Dots();
 
+export type PlayerConfig = {
+    name: string;
+    colour: string;
+};
+
 /**
  * Connects to the WebSocket server and retries on close.
  */
-export function connectWebSocket(): void {
+export function connectWebSocket(config?: PlayerConfig): void {
+    if (config) {
+        playerConfig = config;
+    }
+
+    if (!playerConfig) {
+        return;
+    }
+
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         return;
     }
@@ -22,6 +36,7 @@ export function connectWebSocket(): void {
 
     socket.addEventListener("open", () => {
         console.log("WebSocket connected");
+        socket?.send(JSON.stringify({type: "InitConfig", ...playerConfig}));
     });
 
     socket.addEventListener("message", (event: MessageEvent) => {
@@ -62,7 +77,7 @@ export function connectWebSocket(): void {
     socket.addEventListener("close", () => {
         console.log("WebSocket closed - reconnecting...");
         socket = null;
-        setTimeout(connectWebSocket, 1000);
+        setTimeout(() => connectWebSocket(), 1000);
     });
 
     socket.addEventListener("error", () => {

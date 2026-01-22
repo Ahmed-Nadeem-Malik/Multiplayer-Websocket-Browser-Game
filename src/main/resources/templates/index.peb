@@ -7,6 +7,21 @@
 </head>
 <body>
 
+<div id="menuOverlay" class="menu-overlay">
+    <div class="menu-card">
+        <h1 class="menu-title">Join Game</h1>
+        <label class="menu-label" for="playerName">Name</label>
+        <input id="playerName" class="menu-input" type="text" placeholder="undefined" maxlength="24">
+        <div class="menu-label">Colour</div>
+        <div class="color-picker" id="colorPicker">
+            {% for colour in playerColours %}
+                <button class="color-swatch" type="button" data-colour="{{ colour }}" style="background-color: {{ colour }};"></button>
+            {% endfor %}
+        </div>
+        <button id="startButton" class="menu-button" type="button">Start</button>
+    </div>
+</div>
+
 <canvas id="gameCanvas"></canvas>
 
 </body>

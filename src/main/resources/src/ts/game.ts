@@ -11,7 +11,7 @@ export type MovementState = {
  * Serializable data shape for player state.
  */
 export type PlayerSnapshot = {
-    id: string; x: number; y: number; speed: number; radius: number; colour: string;
+    id: string; name: string; x: number; y: number; speed: number; radius: number; colour: string;
 };
 
 export type DotSnapshot = {
@@ -26,6 +26,7 @@ export const context = canvas.getContext("2d")!;
 
 export class Player {
     private id: string | undefined
+    private name: string = "undefined";
     private x: number = 500;
     private y: number = 500;
     private radius: number = 0;
@@ -54,6 +55,14 @@ export class Player {
         context.fillStyle = this.colour;
         context.globalAlpha = PLAYER_OPACITY;
         context.fill();
+        context.globalAlpha = 1;
+        if (this.name) {
+            context.fillStyle = "#000000";
+            context.font = `${Math.max(12, Math.floor(this.radius / 2))}px sans-serif`;
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.fillText(this.name, this.x, this.y);
+        }
         context.restore();
     }
 }

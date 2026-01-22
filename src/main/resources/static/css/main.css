@@ -5,11 +5,95 @@ html, body {
     padding: 0;
     overflow: hidden;
     background-color: #ffffff;
+    font-family: "Inter", "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 #gameCanvas {
     display: block;
     width: 100vw;
     height: 100vh;
+}
+
+.menu-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 10;
+}
+
+.menu-overlay.hidden {
+    display: none;
+}
+
+.menu-card {
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 16px;
+    min-width: 320px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.menu-title {
+    margin: 0;
+    font-size: 24px;
+    text-align: center;
+}
+
+.menu-label {
+    font-weight: 600;
+    color: #2b2b2b;
+}
+
+.menu-input {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #cfcfcf;
+    font-size: 16px;
+}
+
+.menu-input:focus {
+    outline: none;
+    border-color: #2e5aac;
+    box-shadow: 0 0 0 2px rgba(46, 90, 172, 0.2);
+}
+
+.color-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+    gap: 12px;
+}
+
+.color-swatch {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+}
+
+.color-swatch.selected {
+    border-color: #222222;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
+}
+
+.menu-button {
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #2e5aac;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.menu-button:hover {
+    background: #244a8d;
 }
 
