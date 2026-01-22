@@ -22,7 +22,6 @@ Players spawn into a shared circular arena, consume dots to grow, and collide to
 │                         Ktor Server                              │
 ├──────────────────────┬───────────────────────┬───────────────────┤
 │   WebSocket Layer    │   Game State Engine   │   HTTP Routing    │
-│                      │                       │                   │
 │ • /movement channel  │ • Player registry     │ • / index page    │
 │ • Input decoding     │ • Dot registry        │ • /health check   │
 │ • Broadcast updates  │ • Collision handling  │ • static assets   │
