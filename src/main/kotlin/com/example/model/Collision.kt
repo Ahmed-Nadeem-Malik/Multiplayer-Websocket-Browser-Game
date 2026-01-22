@@ -72,5 +72,5 @@ fun handlePlayerCollisions(player: Player): Set<String> {
         eliminated.add(smaller.id)
     }
 
-    return eliminated
+   return eliminated
 }

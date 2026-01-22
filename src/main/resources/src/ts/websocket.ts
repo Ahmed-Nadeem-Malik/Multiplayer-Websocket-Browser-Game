@@ -149,8 +149,7 @@ export function sendInputState(): void {
  * Message payload for initializing player identity.
  */
 type InitMessage = | { type: "InitPlayer"; player: PlayerSnapshot } | {
-    type: "InitPlayers";
-    players: Record<string, PlayerSnapshot>
+    type: "InitPlayers"; players: Record<string, PlayerSnapshot>
 } | { type: "InitDots"; dots: DotSnapshot[] };
 
 type UpdatePlayersMessage = { type: "UpdatePlayers"; players: Record<string, PlayerSnapshot> };

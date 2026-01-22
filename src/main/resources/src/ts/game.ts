@@ -1,15 +1,9 @@
 import {DOT_OPACITY, DOT_RADIUS, PLAYER_OPACITY} from "./constants.js";
 
-/**
- * Represents the current input state for movement keys.
- */
 export type MovementState = {
     w: boolean; a: boolean; s: boolean; d: boolean;
 };
 
-/**
- * Serializable data shape for player state.
- */
 export type PlayerSnapshot = {
     id: string; name: string; x: number; y: number; speed: number; radius: number; colour: string;
 };
@@ -18,14 +12,16 @@ export type DotSnapshot = {
     id: number; x: number; y: number; radius: number; colour: string;
 };
 
-export const movementState: MovementState = {w: false, a: false, s: false, d: false};
+export const movementState: MovementState = {
+    w: false, a: false, s: false, d: false,
+};
 
 export const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 
 export const context = canvas.getContext("2d")!;
 
 export class Player {
-    private id: string | undefined
+    private id: string | undefined;
     private name: string = "undefined";
     private x: number = 500;
     private y: number = 500;

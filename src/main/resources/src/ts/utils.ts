@@ -9,7 +9,9 @@ import {
     WORLD_RADIUS,
 } from "./constants.js";
 
-export type CameraPosition = { x: number; y: number };
+export type CameraPosition = {
+    x: number; y: number;
+};
 
 export function isMovementKey(key: string): key is keyof MovementState {
     return key === "w" || key === "a" || key === "s" || key === "d";

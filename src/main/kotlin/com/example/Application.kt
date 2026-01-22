@@ -8,12 +8,8 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    configureSerialization()
-    configureSecurity()
     configureSockets()
     configureBots()
-    configureMonitoring()
-    configureHttp()
     configureRouting()
     configureTemplating()
 }
