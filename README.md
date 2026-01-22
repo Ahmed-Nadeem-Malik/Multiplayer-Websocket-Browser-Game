@@ -1,33 +1,21 @@
-# WebSocket Game Backend
+# Multiplayer WebSocket Browser Game (Agar.io-Inspired)
 
-A real-time multiplayer game backend built with Kotlin and Ktor. The server owns the game state, processes player inputs, resolves collisions, and broadcasts updates over WebSockets. It also serves the client entry page and static assets.
+A real-time, Agar.io-style multiplayer arena built with Kotlin + Ktor. This project showcases an authoritative game server, a WebSocket-driven client, and a fast broadcast loop that keeps every player in sync. It’s a compact but serious demonstration of real-time networking, game-state management, and server-side simulation.
 
-## Game Summary
+## Why This Project Stands Out
 
-Players join a shared arena, move with continuous input, collect dots to grow, and avoid collisions. The game is authoritative on the server, which applies movement updates, resolves interactions, and notifies all connected clients of world changes. Bots are spawned to keep the arena active even when few humans are connected.
+- **Authoritative server loop** that owns all player, dot, and collision state
+- **High-frequency WebSocket pipeline** for input capture and world updates
+- **Deterministic collision handling** with elimination events and graceful cleanup
+- **Bot simulation layer** that stress-tests the arena under load
+- **Clean modular Ktor architecture** for routing, sockets, templating, and game logic
+- **Polished client UX** with a responsive canvas renderer and reconnect handling
 
-## Backend Capabilities
+## Gameplay Overview
 
-### Core Systems
+Players spawn into a shared circular arena, consume dots to grow, and collide to eliminate smaller opponents. Movement is continuous, input-driven, and validated server-side. The server broadcasts authoritative updates to all sessions, while bots keep the world active even with low player counts.
 
-- **Authoritative state management** for players, dots, and sessions
-- **Real-time WebSocket pipeline** for movement inputs and broadcasts
-- **Collision resolution** with elimination notifications and session cleanup
-- **Bot simulation** to populate the arena and stress live updates
-- **HTTP routing** for the landing page and health checks
-- **Template rendering** using Pebble for the index page
-
-### Key Features
-
-- **Low-latency updates** with broadcast fan-out to all sessions
-- **Server-side validation** of player configuration and movement inputs
-- **Graceful elimination flow** with delayed disconnects
-- **Centralized registries** for player and session management
-- **Pluggable Ktor modules** for routing, sockets, and templating
-
-## System Architecture
-
-The backend uses an event loop pattern around WebSockets. Player input drives game state updates, which are broadcast to every connected session.
+## Architecture at a Glance
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -64,13 +52,6 @@ The backend uses an event loop pattern around WebSockets. Player input drives ga
 | --- | --- |
 | `InitConfig` | Set player name and colour. |
 | `input` | Movement input with directional booleans. |
-
-## HTTP Routes
-
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/` | Serves the game client entry page. |
-| `GET` | `/health` | Returns a health check response. |
 
 ## Project Structure
 
@@ -136,26 +117,13 @@ The server reads `application.yaml` for deployment settings.
 
 Once running, the server listens on `http://0.0.0.0:8080` by default.
 
-## Development Notes
+## What This Demonstrates
 
-- Player updates are broadcast on every input event.
-- Eliminations are sent before the session is closed to allow client UI updates.
-- Bots reuse the same collision and broadcast pipeline as real players.
-
-## What I Learned
-
-- Designing an authoritative server loop for real-time multiplayer state.
-- Managing concurrent WebSocket sessions and broadcast fan-out.
-- Modeling game state changes with immutable messages and registries.
-- Handling edge cases around eliminations and disconnects.
-- Structuring a Ktor project with clear module boundaries.
-
-## Technical Highlights
-
-- Minimal dependencies for a focused backend runtime.
-- Clear separation between transport (WebSockets) and game state logic.
-- Deterministic collision handling driven by server-side state.
-- Extensible plugin structure for routing, sockets, and templating.
+- Real-time multiplayer systems design with server authority
+- Concurrent WebSocket session management and broadcast fan-out
+- Game-state modeling with deterministic collision rules
+- Kotlin/Ktor production patterns and modular service layout
+- A client loop that renders smoothly under continuous updates
 
 ## Troubleshooting
 
