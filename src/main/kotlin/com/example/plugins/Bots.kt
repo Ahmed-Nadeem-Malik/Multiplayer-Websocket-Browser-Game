@@ -15,21 +15,31 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlin.math.max
 import kotlin.random.Random
 
 private const val BOT_COUNT = 100
 private const val BOT_ID_PREFIX = "bot-"
 private const val BOT_ID_START = 67
-private const val BOT_MIN_DELAY_MS = 30L
-private const val BOT_MAX_DELAY_MS = 80L
+private const val BOT_MIN_DELAY_MS = 5L
+private const val BOT_MAX_DELAY_MS = 15L
 private const val BOT_MIN_STEPS = 120
 private const val BOT_MAX_STEPS = 240
+private const val BOT_MIN_DIRECTION_MS = 1000L
+private const val BOT_MAX_DIRECTION_MS = 3000L
+private const val BOT_AVG_DELAY_MS = (BOT_MIN_DELAY_MS + BOT_MAX_DELAY_MS) / 2
+
+private data class BotState(
+    val player: Player,
+    var remainingSteps: Int,
+    var movementInput: MovementInput,
+)
 
 fun Application.configureBots() {
     val jsonCodec = Json { encodeDefaults = true }
     val bots = createBots()
 
-    bots.forEach(PlayerRepository::addPlayer)
+    bots.forEach { bot -> PlayerRepository.addPlayer(bot.player) }
 
     CoroutineScope(Dispatchers.Default).launch {
         while (isActive) {
@@ -39,48 +49,57 @@ fun Application.configureBots() {
             val eliminatedPlayers = mutableSetOf<String>()
 
             for (bot in bots.toList()) {
-                applyBotSteps(bot)
-                eliminatedPlayers.addAll(handlePlayerCollisions(bot))
+                applyBotStep(bot)
+                eliminatedPlayers.addAll(handlePlayerCollisions(bot.player))
 
-                val collisionDots = handleDotCollisions(bot)
+                val collisionDots = handleDotCollisions(bot.player)
                 for (dot in collisionDots) {
                     updatedDots[dot.id] = dot
                 }
+            }
+
+            if (eliminatedPlayers.isNotEmpty()) {
+                removeEliminatedBots(bots, eliminatedPlayers)
             }
 
             broadcastPlayers(jsonCodec)
             if (updatedDots.isNotEmpty()) {
                 broadcastDots(jsonCodec, updatedDots.values.toList())
             }
-
-            if (eliminatedPlayers.isNotEmpty()) {
-                removeEliminatedBots(bots, eliminatedPlayers)
-            }
         }
     }
 }
 
-private fun createBots(): MutableList<Player> {
+private fun createBots(): MutableList<BotState> {
     return MutableList(BOT_COUNT) { index ->
-        Player(id = "$BOT_ID_PREFIX${BOT_ID_START + index}")
+        val player = Player(id = "$BOT_ID_PREFIX${BOT_ID_START + index}")
+        BotState(
+            player = player,
+            remainingSteps = 0,
+            movementInput = randomMovementInput(player.id)
+        )
     }
 }
 
-private fun applyBotSteps(bot: Player) {
-    val steps = Random.nextInt(BOT_MIN_STEPS, BOT_MAX_STEPS + 1)
-    repeat(steps) {
-        bot.update(randomMovementInput(bot.id))
+private fun applyBotStep(bot: BotState) {
+    if (bot.remainingSteps <= 0) {
+        val durationMs = Random.nextLong(BOT_MIN_DIRECTION_MS, BOT_MAX_DIRECTION_MS + 1)
+        bot.remainingSteps = max(1, (durationMs / BOT_AVG_DELAY_MS).toInt())
+        bot.movementInput = randomMovementInput(bot.player.id)
     }
+
+    bot.player.update(bot.movementInput)
+    bot.remainingSteps -= 1
 }
 
-private suspend fun removeEliminatedBots(bots: MutableList<Player>, eliminatedPlayers: Set<String>) {
+private suspend fun removeEliminatedBots(bots: MutableList<BotState>, eliminatedPlayers: Set<String>) {
     for (eliminatedId in eliminatedPlayers) {
         SessionRegistry.getSession(eliminatedId)?.close(
             CloseReason(CloseReason.Codes.NORMAL, "Collided")
         )
         SessionRegistry.removeSession(eliminatedId)
         PlayerRepository.removePlayer(eliminatedId)
-        bots.removeAll { it.id == eliminatedId }
+        bots.removeAll { it.player.id == eliminatedId }
     }
 }
 

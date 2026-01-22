@@ -67,8 +67,7 @@ const resizeCanvas = () => {
 const getPlayerConfig = () => {
     const rawName = nameInput?.value.trim() ?? "";
     return {
-        name: rawName.length > 0 ? rawName : DEFAULT_NAME,
-        colour: selectedColour,
+        name: rawName.length > 0 ? rawName : DEFAULT_NAME, colour: selectedColour,
     };
 };
 const setMenuState = (title, buttonText) => {
