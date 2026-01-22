@@ -32,8 +32,17 @@ export class Player {
         context.fill();
         context.globalAlpha = clampedAlpha;
         if (this.name) {
+            const maxDiameter = this.radius * 1.6;
+            const baseFontSize = Math.max(12, Math.floor(this.radius / 2));
+            let fontSize = baseFontSize;
+            context.font = `${fontSize}px sans-serif`;
+            let textWidth = context.measureText(this.name).width;
+            if (textWidth > maxDiameter && textWidth > 0) {
+                const scale = Math.max(0.5, maxDiameter / textWidth);
+                fontSize = Math.floor(baseFontSize * scale);
+                context.font = `${fontSize}px sans-serif`;
+            }
             context.fillStyle = "#000000";
-            context.font = `${Math.max(12, Math.floor(this.radius / 2))}px sans-serif`;
             context.textAlign = "center";
             context.textBaseline = "middle";
             context.fillText(this.name, this.x, this.y);

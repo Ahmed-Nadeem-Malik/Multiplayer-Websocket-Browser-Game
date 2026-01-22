@@ -5,7 +5,6 @@ let playerConfig = null;
 let reconnectEnabled = true;
 let disconnectHandler = null;
 let eliminationHandler = null;
-let eliminationNotified = false;
 export const localPlayer = new Player();
 export const playerRegistry = new Players();
 export const dotRegistry = new Dots();
@@ -34,13 +33,7 @@ const updateLocalPlayer = (players) => {
     }
     const snapshot = players[localId];
     if (snapshot) {
-        eliminationNotified = false;
         localPlayer.applySnapshot(snapshot);
-        return;
-    }
-    if (!eliminationNotified) {
-        eliminationNotified = true;
-        eliminationHandler?.();
     }
 };
 const handlePlayersSnapshot = (players) => {
@@ -64,6 +57,13 @@ const handleServerMessage = (message) => {
         case "UpdateDots":
             dotRegistry.applyUpdates(message.dots);
             break;
+        case "Eliminated": {
+            const localId = localPlayer.getId();
+            if (localId && message.playerId === localId && !playerRegistry.getAll()[localId]) {
+                eliminationHandler?.();
+            }
+            break;
+        }
     }
 };
 const scheduleReconnect = () => {

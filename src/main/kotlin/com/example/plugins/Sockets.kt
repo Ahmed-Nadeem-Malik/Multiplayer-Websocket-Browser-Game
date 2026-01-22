@@ -6,7 +6,9 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -32,6 +34,7 @@ fun Application.configureSockets() {
     routing {
         webSocket("/movement") {
             val player = Player()
+            val sessionScope = CoroutineScope(coroutineContext)
             PlayerRepository.addPlayer(player)
             SessionRegistry.addSession(player.id, this)
 
@@ -49,7 +52,8 @@ fun Application.configureSockets() {
                         }
 
                         "input" -> {
-                            val eliminated = handleMovementPayload(jsonCodec, payload, application, player)
+                            val eliminated =
+                                handleMovementPayload(jsonCodec, payload, application, player, sessionScope)
                             if (eliminated) break
                         }
                     }
@@ -121,7 +125,7 @@ internal fun applyPlayerConfig(player: Player, config: PlayerConfigInput) {
 }
 
 private suspend fun handleMovementPayload(
-    jsonCodec: Json, payload: String, application: Application, player: Player
+    jsonCodec: Json, payload: String, application: Application, player: Player, sessionScope: CoroutineScope
 ): Boolean {
     val movementInput = decodeMovementInput(jsonCodec, payload, application) ?: return false
     player.update(movementInput)
@@ -139,8 +143,11 @@ private suspend fun handleMovementPayload(
     }
 
     if (eliminatedPlayers.isNotEmpty()) {
-        delay(ELIMINATION_DELAY_MS)
-        closeEliminatedSessions(eliminatedPlayers)
+        notifyEliminatedPlayers(jsonCodec, eliminatedPlayers)
+        sessionScope.launch {
+            delay(ELIMINATION_DELAY_MS)
+            closeEliminatedSessions(eliminatedPlayers)
+        }
     }
 
     return eliminatedPlayers.contains(player.id)
@@ -149,6 +156,13 @@ private suspend fun handleMovementPayload(
 private fun removePlayersFromRepository(eliminatedPlayers: Set<String>) {
     for (eliminatedId in eliminatedPlayers) {
         PlayerRepository.removePlayer(eliminatedId)
+    }
+}
+
+private suspend fun notifyEliminatedPlayers(jsonCodec: Json, eliminatedPlayers: Set<String>) {
+    for (eliminatedId in eliminatedPlayers) {
+        val eliminatedMessage = jsonCodec.encodeToString(EliminatedMessage(playerId = eliminatedId))
+        SessionRegistry.getSession(eliminatedId)?.send(Frame.Text(eliminatedMessage))
     }
 }
 

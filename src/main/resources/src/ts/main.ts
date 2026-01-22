@@ -88,8 +88,7 @@ const getPlayerConfig = (): PlayerConfig => {
     const rawName = nameInput?.value.trim() ?? "";
 
     return {
-        name: rawName.length > 0 ? rawName : DEFAULT_NAME,
-        colour: selectedColour,
+        name: rawName.length > 0 ? rawName : DEFAULT_NAME, colour: selectedColour,
     };
 };
 
@@ -130,15 +129,7 @@ const startRenderLoopOnce = (): void => {
     }
 
     renderLoopStarted = true;
-    startRenderLoop(
-        playerRegistry,
-        dotRegistry,
-        localPlayer,
-        context,
-        canvas,
-        getCameraPosition,
-        getLocalPlayerAlpha,
-    );
+    startRenderLoop(playerRegistry, dotRegistry, localPlayer, context, canvas, getCameraPosition, getLocalPlayerAlpha,);
 };
 
 const ensureInputLoop = (): void => {

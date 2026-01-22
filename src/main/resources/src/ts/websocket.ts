@@ -7,7 +7,6 @@ let playerConfig: PlayerConfig | null = null;
 let reconnectEnabled = true;
 let disconnectHandler: (() => void) | null = null;
 let eliminationHandler: (() => void) | null = null;
-let eliminationNotified = false;
 
 export const localPlayer = new Player();
 
@@ -16,8 +15,7 @@ export const playerRegistry = new Players();
 export const dotRegistry = new Dots();
 
 export type PlayerConfig = {
-    name: string;
-    colour: string;
+    name: string; colour: string;
 };
 
 export const setReconnectEnabled = (enabled: boolean): void => {
@@ -52,14 +50,7 @@ const updateLocalPlayer = (players: Record<string, PlayerSnapshot>): void => {
 
     const snapshot = players[localId];
     if (snapshot) {
-        eliminationNotified = false;
         localPlayer.applySnapshot(snapshot);
-        return;
-    }
-
-    if (!eliminationNotified) {
-        eliminationNotified = true;
-        eliminationHandler?.();
     }
 };
 
@@ -85,6 +76,13 @@ const handleServerMessage = (message: ServerMessage): void => {
         case "UpdateDots":
             dotRegistry.applyUpdates(message.dots);
             break;
+        case "Eliminated": {
+            const localId = localPlayer.getId();
+            if (localId && message.playerId === localId && !playerRegistry.getAll()[localId]) {
+                eliminationHandler?.();
+            }
+            break;
+        }
     }
 };
 
@@ -150,13 +148,15 @@ export function sendInputState(): void {
 /**
  * Message payload for initializing player identity.
  */
-type InitMessage =
-    | { type: "InitPlayer"; player: PlayerSnapshot }
-    | { type: "InitPlayers"; players: Record<string, PlayerSnapshot> }
-    | { type: "InitDots"; dots: DotSnapshot[] };
+type InitMessage = | { type: "InitPlayer"; player: PlayerSnapshot } | {
+    type: "InitPlayers";
+    players: Record<string, PlayerSnapshot>
+} | { type: "InitDots"; dots: DotSnapshot[] };
 
 type UpdatePlayersMessage = { type: "UpdatePlayers"; players: Record<string, PlayerSnapshot> };
 
 type UpdateDotsMessage = { type: "UpdateDots"; dots: DotSnapshot[] };
 
-type ServerMessage = InitMessage | UpdatePlayersMessage | UpdateDotsMessage;
+type EliminatedMessage = { type: "Eliminated"; playerId: string };
+
+type ServerMessage = InitMessage | UpdatePlayersMessage | UpdateDotsMessage | EliminatedMessage;

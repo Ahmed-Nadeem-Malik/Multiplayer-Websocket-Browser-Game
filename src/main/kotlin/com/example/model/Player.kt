@@ -62,14 +62,14 @@ data class Player(
 }
 
 @Serializable
- data class MovementInput(
-     val type: String, val id: String, val w: Boolean, val a: Boolean, val s: Boolean, val d: Boolean
- )
+data class MovementInput(
+    val type: String, val id: String, val w: Boolean, val a: Boolean, val s: Boolean, val d: Boolean
+)
 
 @Serializable
- data class PlayerConfigInput(
-     val type: String, val name: String, val colour: String
- )
+data class PlayerConfigInput(
+    val type: String, val name: String, val colour: String
+)
 
 
 /**
@@ -89,4 +89,8 @@ data class InitPlayersMessage(val type: String = "InitPlayers", val players: Map
  */
 @Serializable
 data class UpdatePlayersMessage(val type: String = "UpdatePlayers", val players: Map<String, Player>)
+
+@Serializable
+data class EliminatedMessage(val type: String = "Eliminated", val playerId: String)
+
 

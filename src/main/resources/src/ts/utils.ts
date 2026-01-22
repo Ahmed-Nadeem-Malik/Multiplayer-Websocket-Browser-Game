@@ -15,15 +15,7 @@ export function isMovementKey(key: string): key is keyof MovementState {
     return key === "w" || key === "a" || key === "s" || key === "d";
 }
 
-export function startRenderLoop(
-    playerRegistry: Players,
-    dotRegistry: Dots,
-    localPlayer: Player,
-    renderContext: CanvasRenderingContext2D,
-    gameCanvas: HTMLCanvasElement,
-    getCameraPosition: () => CameraPosition,
-    getLocalPlayerAlpha: () => number,
-): void {
+export function startRenderLoop(playerRegistry: Players, dotRegistry: Dots, localPlayer: Player, renderContext: CanvasRenderingContext2D, gameCanvas: HTMLCanvasElement, getCameraPosition: () => CameraPosition, getLocalPlayerAlpha: () => number,): void {
     const loop = (): void => {
         renderContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
@@ -74,13 +66,7 @@ function drawWorldBorder(renderContext: CanvasRenderingContext2D): void {
     renderContext.stroke();
 }
 
-function drawGrid(
-    renderContext: CanvasRenderingContext2D,
-    cameraX: number,
-    cameraY: number,
-    viewportWidth: number,
-    viewportHeight: number,
-): void {
+function drawGrid(renderContext: CanvasRenderingContext2D, cameraX: number, cameraY: number, viewportWidth: number, viewportHeight: number,): void {
     const startX = Math.floor(cameraX / GRID_SIZE) * GRID_SIZE;
     const startY = Math.floor(cameraY / GRID_SIZE) * GRID_SIZE;
     const endX = cameraX + viewportWidth;
