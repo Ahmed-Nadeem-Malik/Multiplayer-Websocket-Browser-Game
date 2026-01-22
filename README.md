@@ -23,11 +23,10 @@ The browser client is written in TypeScript under `src/main/resources/src/ts/` w
 ## Architecture at a Glance
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Ktor Server                             │
+┌──────────────────────────────────────────────────────────────────┐
+│                         Ktor Server                              │
 ├──────────────────────┬───────────────────────┬───────────────────┤
 │   WebSocket Layer    │   Game State Engine   │   HTTP Routing    │
-│                      │                       │                   │
 │ • /movement channel  │ • Player registry     │ • / index page    │
 │ • Input decoding     │ • Dot registry        │ • /health check   │
 │ • Broadcast updates  │ • Collision handling  │ • static assets   │
