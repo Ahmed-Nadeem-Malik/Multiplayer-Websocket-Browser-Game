@@ -1,4 +1,4 @@
-import {PLAYER_OPACITY, PLAYER_RADIUS} from "./constants.js";
+import {DOT_OPACITY, DOT_RADIUS, PLAYER_OPACITY} from "./constants.js";
 
 /**
  * Represents the current input state for movement keys.
@@ -11,7 +11,11 @@ export type MovementState = {
  * Serializable data shape for player state.
  */
 export type PlayerSnapshot = {
-    id: string; x: number; y: number; speed: number; colour: string;
+    id: string; x: number; y: number; speed: number; radius: number; colour: string;
+};
+
+export type DotSnapshot = {
+    id: number; x: number; y: number; radius: number; colour: string;
 };
 
 export const movementState: MovementState = {w: false, a: false, s: false, d: false};
@@ -24,7 +28,7 @@ export class Player {
     private id: string | undefined
     private x: number = 500;
     private y: number = 500;
-    private radius: number = PLAYER_RADIUS;
+    private radius: number = 0;
     private colour: string = "#1F51FF";
 
     public applySnapshot(snapshot: PlayerSnapshot): void {
@@ -69,5 +73,69 @@ export class Players {
             nextPlayers[id] = player;
         }
         this.playersById = nextPlayers;
+    }
+}
+
+export class Dot {
+    private id: number = 0;
+    private x: number = 0;
+    private y: number = 0;
+    private radius: number = 0;
+    private colour: string = "#FFFFFF";
+
+    public applySnapshot(snapshot: DotSnapshot): void {
+        Object.assign(this, snapshot);
+    }
+
+    public getId(): number {
+        return this.id;
+    }
+
+    public getX(): number {
+        return this.x;
+    }
+
+    public getY(): number {
+        return this.y;
+    }
+
+    public getColour(): string {
+        return this.colour;
+    }
+
+    public draw(): void {
+        context.save();
+        context.beginPath();
+        context.arc(this.x, this.y, this.radius || DOT_RADIUS, 0, Math.PI * 2);
+        context.fillStyle = this.colour;
+        context.globalAlpha = DOT_OPACITY;
+        context.fill();
+        context.restore();
+    }
+}
+
+export class Dots {
+    private dotsById: Record<number, Dot> = {};
+
+    public getAll(): Record<number, Dot> {
+        return this.dotsById;
+    }
+
+    public applySnapshot(snapshot: DotSnapshot[]): void {
+        const nextDots: Record<number, Dot> = {};
+        for (const dotSnapshot of snapshot) {
+            const dot = new Dot();
+            dot.applySnapshot(dotSnapshot);
+            nextDots[dotSnapshot.id] = dot;
+        }
+        this.dotsById = nextDots;
+    }
+
+    public applyUpdates(snapshot: DotSnapshot[]): void {
+        for (const dotSnapshot of snapshot) {
+            const existing = this.dotsById[dotSnapshot.id] ?? new Dot();
+            existing.applySnapshot(dotSnapshot);
+            this.dotsById[dotSnapshot.id] = existing;
+        }
     }
 }

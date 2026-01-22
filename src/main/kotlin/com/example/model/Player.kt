@@ -2,7 +2,11 @@ package com.example.model
 
 import kotlinx.serialization.Serializable
 import java.util.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
  * Represents a player in the world with movement and color state.
@@ -13,8 +17,15 @@ data class Player(
     var x: Int = DEFAULT_X,
     var y: Int = DEFAULT_Y,
     val speed: Int = DEFAULT_SPEED,
+    var radius: Int = PLAYER_RADIUS,
     val colour: String = randomColour()
 ) {
+    init {
+        val (nx, ny) = randomXY()
+        x = nx
+        y = ny
+    }
+
     /**
      * Applies movement input and clamps position to the circular world.
      */
@@ -35,22 +46,20 @@ data class Player(
     }
 
     companion object {
-        private const val WORLD_RADIUS = 3000.0
-        private const val WORLD_CENTER = WORLD_RADIUS
-        private const val DEFAULT_X = WORLD_CENTER.toInt()
-        private const val DEFAULT_Y = WORLD_CENTER.toInt()
-        private const val DEFAULT_SPEED = 3
-        private val NEON_COLOURS = listOf(
-            "#39FF14", "#FF073A", "#00E5FF", "#FF00FF", "#FF9100"
-        )
+        private fun randomColour(): String = PLAYER_COLOURS.random()
 
-        private fun randomColour(): String = NEON_COLOURS.random()
+        private fun randomXY(): Pair<Int, Int> {
+            val angle = Random.nextDouble(0.0, 2 * PI)
+            val radius = WORLD_RADIUS * sqrt(Random.nextDouble(0.0, 1.0))
+
+            val x = (WORLD_CENTER + radius * cos(angle)).toInt()
+            val y = (WORLD_CENTER + radius * sin(angle)).toInt()
+
+            return x to y
+        }
     }
 }
 
-/**
- * Client input message for movement keys.
- */
 @Serializable
 data class MovementInput(
     val type: String, val id: String, val w: Boolean, val a: Boolean, val s: Boolean, val d: Boolean
@@ -67,3 +76,10 @@ data class InitPlayerMessage(val type: String = "InitPlayer", val player: Player
  */
 @Serializable
 data class InitPlayersMessage(val type: String = "InitPlayers", val players: Map<String, Player>)
+
+/**
+ * Server message that broadcasts updated player positions.
+ */
+@Serializable
+data class UpdatePlayersMessage(val type: String = "UpdatePlayers", val players: Map<String, Player>)
+

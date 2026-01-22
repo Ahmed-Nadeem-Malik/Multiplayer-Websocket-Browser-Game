@@ -1,11 +1,13 @@
 package com.example.plugins
 
+import com.example.model.InitDotsMessage
 import com.example.model.InitPlayerMessage
 import com.example.model.InitPlayersMessage
 import com.example.model.MovementInput
 import com.example.model.Player
 import com.example.model.PlayerRepository
 import com.example.model.SessionRegistry
+import com.example.model.UpdatePlayersMessage
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.server.testing.testApplication
@@ -59,11 +61,13 @@ class MovementSocketTest {
 
         session.sendInitialState(jsonCodec, player)
 
-        assertEquals(2, frames.size)
+        assertEquals(3, frames.size)
         val initPlayer = jsonCodec.decodeFromString<InitPlayerMessage>((frames[0] as Frame.Text).readText())
         val initPlayers = jsonCodec.decodeFromString<InitPlayersMessage>((frames[1] as Frame.Text).readText())
+        val initDots = jsonCodec.decodeFromString<InitDotsMessage>((frames[2] as Frame.Text).readText())
         assertEquals(player.id, initPlayer.player.id)
         assertTrue(initPlayers.players.containsKey(player.id))
+        assertTrue(initDots.dots.isNotEmpty())
 
         PlayerRepository.removePlayer(player.id)
     }
@@ -88,8 +92,8 @@ class MovementSocketTest {
 
         assertEquals(1, framesOne.size)
         assertEquals(1, framesTwo.size)
-        val roster = jsonCodec.decodeFromString<InitPlayersMessage>((framesOne[0] as Frame.Text).readText())
-        assertTrue(roster.players.containsKey(player.id))
+        val updateMessage = jsonCodec.decodeFromString<UpdatePlayersMessage>((framesOne[0] as Frame.Text).readText())
+        assertTrue(updateMessage.players.containsKey(player.id))
 
         SessionRegistry.removeSession("session-1")
         SessionRegistry.removeSession("session-2")
@@ -109,6 +113,7 @@ class MovementSocketTest {
         client.webSocket("/movement") {
             val initPlayerFrame = incoming.receive() as Frame.Text
             incoming.receive()
+            incoming.receive()
 
             val initPlayer = jsonCodec.decodeFromString<InitPlayerMessage>(initPlayerFrame.readText())
             val movementInput = MovementInput(
@@ -123,7 +128,7 @@ class MovementSocketTest {
             send(Frame.Text(jsonCodec.encodeToString(movementInput)))
 
             val updateFrame = incoming.receive() as Frame.Text
-            val roster = jsonCodec.decodeFromString<InitPlayersMessage>(updateFrame.readText())
+            val roster = jsonCodec.decodeFromString<UpdatePlayersMessage>(updateFrame.readText())
             val updatedPlayer = roster.players[initPlayer.player.id]
 
             assertNotNull(updatedPlayer)

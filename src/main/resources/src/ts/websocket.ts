@@ -1,4 +1,4 @@
-import {movementState, Player, Players, PlayerSnapshot} from "./game.js";
+import {Dots, DotSnapshot, movementState, Player, Players, PlayerSnapshot} from "./game.js";
 
 const webSocketUrl = "ws://localhost:8080/movement";
 
@@ -7,6 +7,8 @@ let socket: WebSocket | null = null;
 export const localPlayer = new Player();
 
 export const playerRegistry = new Players();
+
+export const dotRegistry = new Dots();
 
 /**
  * Connects to the WebSocket server and retries on close.
@@ -23,7 +25,7 @@ export function connectWebSocket(): void {
     });
 
     socket.addEventListener("message", (event: MessageEvent) => {
-        const message = JSON.parse(event.data as string) as InitMessage;
+        const message = JSON.parse(event.data as string) as ServerMessage;
         switch (message.type) {
             case "InitPlayer":
                 localPlayer.applySnapshot(message.player);
@@ -37,6 +39,22 @@ export function connectWebSocket(): void {
                         localPlayer.applySnapshot(snapshot);
                     }
                 }
+                break;
+            case "UpdatePlayers":
+                playerRegistry.applySnapshot(message.players);
+                const updatedLocalId = localPlayer.getId();
+                if (updatedLocalId) {
+                    const snapshot = message.players[updatedLocalId];
+                    if (snapshot) {
+                        localPlayer.applySnapshot(snapshot);
+                    }
+                }
+                break;
+            case "InitDots":
+                dotRegistry.applySnapshot(message.dots);
+                break;
+            case "UpdateDots":
+                dotRegistry.applyUpdates(message.dots);
                 break;
         }
     });
@@ -69,8 +87,13 @@ export function sendInputState(): void {
 /**
  * Message payload for initializing player identity.
  */
-type InitMessage = | { type: "InitPlayer"; player: PlayerSnapshot } | {
-    type: "InitPlayers"; players: Record<string, PlayerSnapshot>
-};
+type InitMessage =
+    | { type: "InitPlayer"; player: PlayerSnapshot }
+    | { type: "InitPlayers"; players: Record<string, PlayerSnapshot> }
+    | { type: "InitDots"; dots: DotSnapshot[] };
 
+type UpdatePlayersMessage = { type: "UpdatePlayers"; players: Record<string, PlayerSnapshot> };
 
+type UpdateDotsMessage = { type: "UpdateDots"; dots: DotSnapshot[] };
+
+type ServerMessage = InitMessage | UpdatePlayersMessage | UpdateDotsMessage;

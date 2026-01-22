@@ -1,4 +1,4 @@
-import {connectWebSocket, localPlayer, playerRegistry, sendInputState} from "./websocket.js";
+import {connectWebSocket, dotRegistry, localPlayer, playerRegistry, sendInputState} from "./websocket.js";
 import {canvas, context, movementState} from "./game.js";
 import {isMovementKey, startRenderLoop} from "./utils.js";
 
@@ -32,4 +32,4 @@ window.addEventListener("resize", resizeCanvas);
 
 connectWebSocket();
 setInterval(sendInputState, 1);
-startRenderLoop(playerRegistry, localPlayer, context, canvas);
+startRenderLoop(playerRegistry, dotRegistry, localPlayer, context, canvas);

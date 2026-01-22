@@ -1,4 +1,4 @@
-import { PLAYER_OPACITY, PLAYER_RADIUS } from "./constants.js";
+import { DOT_OPACITY, DOT_RADIUS, PLAYER_OPACITY, PLAYER_RADIUS } from "./constants.js";
 export const movementState = { w: false, a: false, s: false, d: false };
 export const canvas = document.getElementById("gameCanvas");
 export const context = canvas.getContext("2d");
@@ -46,5 +46,61 @@ export class Players {
             nextPlayers[id] = player;
         }
         this.playersById = nextPlayers;
+    }
+}
+export class Dot {
+    constructor() {
+        this.id = 0;
+        this.x = 0;
+        this.y = 0;
+        this.colour = "#FFFFFF";
+    }
+    applySnapshot(snapshot) {
+        Object.assign(this, snapshot);
+    }
+    getId() {
+        return this.id;
+    }
+    getX() {
+        return this.x;
+    }
+    getY() {
+        return this.y;
+    }
+    getColour() {
+        return this.colour;
+    }
+    draw() {
+        context.save();
+        context.beginPath();
+        context.arc(this.x, this.y, DOT_RADIUS, 0, Math.PI * 2);
+        context.fillStyle = this.colour;
+        context.globalAlpha = DOT_OPACITY;
+        context.fill();
+        context.restore();
+    }
+}
+export class Dots {
+    constructor() {
+        this.dotsById = {};
+    }
+    getAll() {
+        return this.dotsById;
+    }
+    applySnapshot(snapshot) {
+        const nextDots = {};
+        for (const dotSnapshot of snapshot) {
+            const dot = new Dot();
+            dot.applySnapshot(dotSnapshot);
+            nextDots[dotSnapshot.id] = dot;
+        }
+        this.dotsById = nextDots;
+    }
+    applyUpdates(snapshot) {
+        for (const dotSnapshot of snapshot) {
+            const existing = this.dotsById[dotSnapshot.id] ?? new Dot();
+            existing.applySnapshot(dotSnapshot);
+            this.dotsById[dotSnapshot.id] = existing;
+        }
     }
 }

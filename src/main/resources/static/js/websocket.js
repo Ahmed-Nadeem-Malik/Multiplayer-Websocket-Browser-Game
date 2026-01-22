@@ -1,8 +1,9 @@
-import { movementState, Player, Players } from "./game.js";
+import { Dots, movementState, Player, Players } from "./game.js";
 const webSocketUrl = "ws://localhost:8080/movement";
 let socket = null;
 export const localPlayer = new Player();
 export const playerRegistry = new Players();
+export const dotRegistry = new Dots();
 /**
  * Connects to the WebSocket server and retries on close.
  */
@@ -29,6 +30,22 @@ export function connectWebSocket() {
                         localPlayer.applySnapshot(snapshot);
                     }
                 }
+                break;
+            case "UpdatePlayers":
+                playerRegistry.applySnapshot(message.players);
+                const updatedLocalId = localPlayer.getId();
+                if (updatedLocalId) {
+                    const snapshot = message.players[updatedLocalId];
+                    if (snapshot) {
+                        localPlayer.applySnapshot(snapshot);
+                    }
+                }
+                break;
+            case "InitDots":
+                dotRegistry.applySnapshot(message.dots);
+                break;
+            case "UpdateDots":
+                dotRegistry.applyUpdates(message.dots);
                 break;
         }
     });

@@ -2,7 +2,7 @@ import { GRID_COLOR, GRID_LINE_WIDTH, GRID_SIZE, WORLD_BORDER_COLOR, WORLD_BORDE
 export function isMovementKey(key) {
     return key === "w" || key === "a" || key === "s" || key === "d";
 }
-export function startRenderLoop(playerRegistry, localPlayer, renderContext, gameCanvas) {
+export function startRenderLoop(playerRegistry, dotRegistry, localPlayer, renderContext, gameCanvas) {
     const loop = () => {
         renderContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
         const cameraX = localPlayer.getX() - gameCanvas.width / 2;
@@ -11,18 +11,27 @@ export function startRenderLoop(playerRegistry, localPlayer, renderContext, game
         renderContext.translate(-cameraX, -cameraY);
         drawGrid(renderContext, cameraX, cameraY, gameCanvas.width, gameCanvas.height);
         drawWorldBorder(renderContext);
-        const localId = localPlayer.getId();
-        for (const [playerId, currentPlayer] of Object.entries(playerRegistry.getAll())) {
-            if (localId && playerId === localId) {
-                continue;
-            }
-            currentPlayer.draw();
-        }
-        localPlayer.draw();
+        drawDots(dotRegistry);
+        drawPlayers(playerRegistry, localPlayer);
         renderContext.restore();
         requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+}
+function drawPlayers(playerRegistry, localPlayer) {
+    const localId = localPlayer.getId();
+    for (const [playerId, currentPlayer] of Object.entries(playerRegistry.getAll())) {
+        if (localId && playerId === localId) {
+            continue;
+        }
+        currentPlayer.draw();
+    }
+    localPlayer.draw();
+}
+function drawDots(dotRegistry) {
+    for (const dot of Object.values(dotRegistry.getAll())) {
+        dot.draw();
+    }
 }
 function drawWorldBorder(renderContext) {
     renderContext.beginPath();

@@ -24,6 +24,11 @@ object SessionRegistry {
     }
 
     /**
+     * Returns a session for a player, if present.
+     */
+    fun getSession(id: String): DefaultWebSocketServerSession? = sessionsById[id]
+
+    /**
      * Returns all active WebSocket sessions.
      */
     fun getSessions(): Collection<DefaultWebSocketServerSession> = sessionsById.values

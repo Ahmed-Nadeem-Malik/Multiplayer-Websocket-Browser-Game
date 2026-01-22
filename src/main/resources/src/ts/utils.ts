@@ -1,4 +1,4 @@
-import {MovementState, Player, Players} from "./game.js";
+import {Dots, MovementState, Player, Players} from "./game.js";
 import {
     GRID_COLOR,
     GRID_LINE_WIDTH,
@@ -14,7 +14,13 @@ export function isMovementKey(key: string): key is keyof MovementState {
 }
 
 
-export function startRenderLoop(playerRegistry: Players, localPlayer: Player, renderContext: CanvasRenderingContext2D, gameCanvas: HTMLCanvasElement): void {
+export function startRenderLoop(
+    playerRegistry: Players,
+    dotRegistry: Dots,
+    localPlayer: Player,
+    renderContext: CanvasRenderingContext2D,
+    gameCanvas: HTMLCanvasElement,
+): void {
     const loop = (): void => {
         renderContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
@@ -26,6 +32,7 @@ export function startRenderLoop(playerRegistry: Players, localPlayer: Player, re
 
         drawGrid(renderContext, cameraX, cameraY, gameCanvas.width, gameCanvas.height);
         drawWorldBorder(renderContext);
+        drawDots(dotRegistry);
         drawPlayers(playerRegistry, localPlayer);
 
         renderContext.restore();
@@ -45,6 +52,12 @@ function drawPlayers(playerRegistry: Players, localPlayer: Player): void {
     }
 
     localPlayer.draw();
+}
+
+function drawDots(dotRegistry: Dots): void {
+    for (const dot of Object.values(dotRegistry.getAll())) {
+        dot.draw();
+    }
 }
 
 function drawWorldBorder(renderContext: CanvasRenderingContext2D): void {
