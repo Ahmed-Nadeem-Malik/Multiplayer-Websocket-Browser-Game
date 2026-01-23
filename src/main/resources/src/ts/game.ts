@@ -129,18 +129,6 @@ export class Dot {
         return this.id;
     }
 
-    public getX(): number {
-        return this.x;
-    }
-
-    public getY(): number {
-        return this.y;
-    }
-
-    public getColour(): string {
-        return this.colour;
-    }
-
     public draw(): void {
         context.save();
         context.beginPath();
