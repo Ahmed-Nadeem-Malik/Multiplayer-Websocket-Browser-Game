@@ -69,9 +69,7 @@ private suspend fun DefaultWebSocketServerSession.handleIncomingFrames(
 ) {
     for (frame in incoming) {
         if (frame !is Frame.Text) continue
-
-        val payload = frame.readText()
-        when (extractMessageType(jsonCodec, payload)) {
+ val payload = frame.readText() when (extractMessageType(jsonCodec, payload)) {
             "InitConfig" -> {
                 val config = decodePlayerConfig(jsonCodec, payload, application) ?: continue
                 applyPlayerConfig(player, config)
