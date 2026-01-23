@@ -36,7 +36,6 @@ fun dotCollision(player: Player, dot: Dot): Boolean {
     val dx = dot.x - player.x
     val dy = dot.y - player.y
     val radius = player.radius - dot.radius
-
     return hasCollision(dx, dy, radius)
 }
 
@@ -59,7 +58,6 @@ fun playerCollision(player: Player, other: Player): Boolean {
     val dx = smaller.x - larger.x
     val dy = smaller.y - larger.y
     val radius = larger.radius - smaller.radius
-
     return hasCollision(dx, dy, radius)
 }
 
@@ -101,17 +99,15 @@ fun handlePlayerCollisions(player: Player): Set<String> {
         if (other.id == player.id) continue
         if (other.id in eliminated || player.id in eliminated) continue
         if (!playerCollision(player, other)) continue
-
         val (larger, smaller) = if (player.radius >= other.radius) {
             player to other
         } else {
             other to player
         }
-
         val gain = (smaller.radius * 0.2).toInt()
         larger.radius += gain
         eliminated.add(smaller.id)
     }
 
-   return eliminated
+    return eliminated
 }

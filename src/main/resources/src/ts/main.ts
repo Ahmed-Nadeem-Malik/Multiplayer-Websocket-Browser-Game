@@ -23,19 +23,12 @@ const nameInput = document.getElementById("playerName") as HTMLInputElement | nu
 const colorButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".color-swatch"));
 
 type EliminationState = {
-    inProgress: boolean;
-    startTime: number | null;
-    frozenCameraPosition: CameraPosition | null;
+    inProgress: boolean; startTime: number | null; frozenCameraPosition: CameraPosition | null;
 };
 
 const gameState = {
-    active: false,
-    renderLoopStarted: false,
-    inputIntervalId: null as number | null,
-    elimination: {
-        inProgress: false,
-        startTime: null,
-        frozenCameraPosition: null,
+    active: false, renderLoopStarted: false, inputIntervalId: null as number | null, elimination: {
+        inProgress: false, startTime: null, frozenCameraPosition: null,
     } as EliminationState,
 };
 
@@ -122,7 +115,9 @@ const getCameraPosition = (): CameraPosition => {
         return gameState.elimination.frozenCameraPosition;
     }
 
-    return {x: localPlayer.getX(), y: localPlayer.getY()};
+    return {
+        x: localPlayer.getX(), y: localPlayer.getY(),
+    };
 };
 
 const getLocalPlayerAlpha = (): number => {
@@ -140,15 +135,7 @@ const startRenderLoopOnce = (): void => {
     }
 
     gameState.renderLoopStarted = true;
-    startRenderLoop(
-        playerRegistry,
-        dotRegistry,
-        localPlayer,
-        context,
-        canvas,
-        getCameraPosition,
-        getLocalPlayerAlpha,
-    );
+    startRenderLoop(playerRegistry, dotRegistry, localPlayer, context, canvas, getCameraPosition, getLocalPlayerAlpha,);
 };
 
 const startInputLoop = (): void => {
@@ -189,7 +176,9 @@ const handleElimination = (): void => {
 
     gameState.elimination.inProgress = true;
     gameState.elimination.startTime = performance.now();
-    gameState.elimination.frozenCameraPosition = {x: localPlayer.getX(), y: localPlayer.getY()};
+    gameState.elimination.frozenCameraPosition = {
+        x: localPlayer.getX(), y: localPlayer.getY(),
+    };
     gameState.active = false;
     resetMovementState();
     stopInputLoop();

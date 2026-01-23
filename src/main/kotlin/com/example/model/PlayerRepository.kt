@@ -27,5 +27,3 @@ object PlayerRepository {
         playersById.remove(id)
     }
 }
-
-

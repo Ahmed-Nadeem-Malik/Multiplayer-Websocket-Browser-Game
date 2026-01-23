@@ -1,19 +1,9 @@
 package com.example.plugins
 
-import com.example.model.Dots
-import com.example.model.MovementInput
-import com.example.model.Player
-import com.example.model.PlayerRepository
-import com.example.model.SessionRegistry
-import com.example.model.handleDotCollisions
-import com.example.model.handlePlayerCollisions
-import io.ktor.server.application.Application
+import com.example.model.*
+import io.ktor.server.application.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import kotlin.math.max
 import kotlin.random.Random
@@ -74,9 +64,7 @@ private fun createBots(): MutableList<BotState> {
     return MutableList(BOT_COUNT) { index ->
         val player = Player(id = "$BOT_ID_PREFIX${BOT_ID_START + index}")
         BotState(
-            player = player,
-            remainingSteps = 0,
-            movementInput = randomMovementInput(player.id)
+            player = player, remainingSteps = 0, movementInput = randomMovementInput(player.id)
         )
     }
 }

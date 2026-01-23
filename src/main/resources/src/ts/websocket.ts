@@ -15,7 +15,8 @@ export const playerRegistry = new Players();
 export const dotRegistry = new Dots();
 
 export type PlayerConfig = {
-    name: string; colour: string;
+    name: string;
+    colour: string;
 };
 
 export const setReconnectEnabled = (enabled: boolean): void => {
@@ -39,7 +40,12 @@ const sendConfig = (): void => {
         return;
     }
 
-    socket.send(JSON.stringify({type: "InitConfig", ...playerConfig}));
+    socket.send(
+        JSON.stringify({
+            type: "InitConfig",
+            ...playerConfig,
+        }),
+    );
 };
 
 const updateLocalPlayer = (players: Record<string, PlayerSnapshot>): void => {
@@ -140,17 +146,22 @@ export function sendInputState(): void {
     const playerId = localPlayer.getId();
     if (!playerId) return;
 
-    socket.send(JSON.stringify({
-        type: "input", id: playerId, ...movementState,
-    }));
+    socket.send(
+        JSON.stringify({
+            type: "input",
+            id: playerId,
+            ...movementState,
+        }),
+    );
 }
 
 /**
  * Message payload for initializing player identity.
  */
-type InitMessage = | { type: "InitPlayer"; player: PlayerSnapshot } | {
-    type: "InitPlayers"; players: Record<string, PlayerSnapshot>
-} | { type: "InitDots"; dots: DotSnapshot[] };
+type InitMessage =
+    | { type: "InitPlayer"; player: PlayerSnapshot }
+    | { type: "InitPlayers"; players: Record<string, PlayerSnapshot> }
+    | { type: "InitDots"; dots: DotSnapshot[] };
 
 type UpdatePlayersMessage = { type: "UpdatePlayers"; players: Record<string, PlayerSnapshot> };
 

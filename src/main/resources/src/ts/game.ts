@@ -1,19 +1,35 @@
 import {DOT_OPACITY, DOT_RADIUS, PLAYER_OPACITY} from "./constants.js";
 
 export type MovementState = {
-    w: boolean; a: boolean; s: boolean; d: boolean;
+    w: boolean;
+    a: boolean;
+    s: boolean;
+    d: boolean;
 };
 
 export type PlayerSnapshot = {
-    id: string; name: string; x: number; y: number; speed: number; radius: number; colour: string;
+    id: string;
+    name: string;
+    x: number;
+    y: number;
+    speed: number;
+    radius: number;
+    colour: string;
 };
 
 export type DotSnapshot = {
-    id: number; x: number; y: number; radius: number; colour: string;
+    id: number;
+    x: number;
+    y: number;
+    radius: number;
+    colour: string;
 };
 
 export const movementState: MovementState = {
-    w: false, a: false, s: false, d: false,
+    w: false,
+    a: false,
+    s: false,
+    d: false,
 };
 
 export const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
@@ -54,6 +70,7 @@ export class Player {
         context.globalAlpha = PLAYER_OPACITY * clampedAlpha;
         context.fill();
         context.globalAlpha = clampedAlpha;
+
         if (this.name) {
             const maxDiameter = this.radius * 1.6;
             const baseFontSize = Math.max(12, Math.floor(this.radius / 2));
@@ -72,6 +89,7 @@ export class Player {
             context.textBaseline = "middle";
             context.fillText(this.name, this.x, this.y);
         }
+
         context.restore();
     }
 }
@@ -85,11 +103,13 @@ export class Players {
 
     public applySnapshot(snapshot: Record<string, PlayerSnapshot>): void {
         const nextPlayers: Record<string, Player> = {};
+
         for (const [id, playerSnapshot] of Object.entries(snapshot)) {
             const player = new Player();
             player.applySnapshot(playerSnapshot);
             nextPlayers[id] = player;
         }
+
         this.playersById = nextPlayers;
     }
 }
@@ -141,11 +161,13 @@ export class Dots {
 
     public applySnapshot(snapshot: DotSnapshot[]): void {
         const nextDots: Record<number, Dot> = {};
+
         for (const dotSnapshot of snapshot) {
             const dot = new Dot();
             dot.applySnapshot(dotSnapshot);
             nextDots[dotSnapshot.id] = dot;
         }
+
         this.dotsById = nextDots;
     }
 

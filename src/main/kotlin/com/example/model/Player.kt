@@ -108,7 +108,6 @@ data class PlayerConfigInput(
     val type: String, val name: String, val colour: String
 )
 
-
 /**
  * Server message that initializes the local player state.
  *
@@ -144,5 +143,3 @@ data class UpdatePlayersMessage(val type: String = "UpdatePlayers", val players:
  */
 @Serializable
 data class EliminatedMessage(val type: String = "Eliminated", val playerId: String)
-
-

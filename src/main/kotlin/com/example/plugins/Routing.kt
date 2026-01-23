@@ -22,8 +22,7 @@ fun Application.configureRouting() {
             call.respond(
                 PebbleContent(
                     "index.peb", mapOf(
-                        "title" to "WebSocket Game",
-                        "playerColours" to PLAYER_COLOURS
+                        "title" to "WebSocket Game", "playerColours" to PLAYER_COLOURS
                     )
                 )
             )
