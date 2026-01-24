@@ -10,13 +10,8 @@ const startButton = document.getElementById("startButton");
 const nameInput = document.getElementById("playerName");
 const colorButtons = Array.from(document.querySelectorAll(".color-swatch"));
 const gameState = {
-    active: false,
-    renderLoopStarted: false,
-    inputIntervalId: null,
-    elimination: {
-        inProgress: false,
-        startTime: null,
-        frozenCameraPosition: null,
+    active: false, renderLoopStarted: false, inputIntervalId: null, elimination: {
+        inProgress: false, startTime: null, frozenCameraPosition: null,
     },
 };
 let selectedColour = colorButtons[0]?.dataset.colour ?? "#B03030";
@@ -90,7 +85,9 @@ const getCameraPosition = () => {
     if (gameState.elimination.inProgress && gameState.elimination.frozenCameraPosition) {
         return gameState.elimination.frozenCameraPosition;
     }
-    return { x: localPlayer.getX(), y: localPlayer.getY() };
+    return {
+        x: localPlayer.getX(), y: localPlayer.getY(),
+    };
 };
 const getLocalPlayerAlpha = () => {
     if (!gameState.elimination.inProgress || gameState.elimination.startTime === null) {
@@ -137,7 +134,9 @@ const handleElimination = () => {
     }
     gameState.elimination.inProgress = true;
     gameState.elimination.startTime = performance.now();
-    gameState.elimination.frozenCameraPosition = { x: localPlayer.getX(), y: localPlayer.getY() };
+    gameState.elimination.frozenCameraPosition = {
+        x: localPlayer.getX(), y: localPlayer.getY(),
+    };
     gameState.active = false;
     resetMovementState();
     stopInputLoop();

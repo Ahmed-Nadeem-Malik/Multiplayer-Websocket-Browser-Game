@@ -24,7 +24,10 @@ const sendConfig = () => {
     if (!socket || !playerConfig) {
         return;
     }
-    socket.send(JSON.stringify({ type: "InitConfig", ...playerConfig }));
+    socket.send(JSON.stringify({
+        type: "InitConfig",
+        ...playerConfig,
+    }));
 };
 const updateLocalPlayer = (players) => {
     const localId = localPlayer.getId();
@@ -113,6 +116,8 @@ export function sendInputState() {
     if (!playerId)
         return;
     socket.send(JSON.stringify({
-        type: "input", id: playerId, ...movementState,
+        type: "input",
+        id: playerId,
+        ...movementState,
     }));
 }
