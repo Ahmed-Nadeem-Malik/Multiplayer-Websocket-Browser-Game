@@ -1,33 +1,16 @@
 package com.example.plugins
 
-import com.example.model.Dot
-import com.example.model.Dots
-import com.example.model.InitDotsMessage
-import com.example.model.InitPlayerMessage
-import com.example.model.InitPlayersMessage
-import com.example.model.MovementInput
-import com.example.model.Player
-import com.example.model.PlayerConfigInput
-import com.example.model.PlayerRepository
-import com.example.model.SessionRegistry
-import com.example.model.UpdateDotsMessage
-import com.example.model.UpdatePlayersMessage
-import com.example.model.PLAYER_COLOURS
+import com.example.model.*
+import io.ktor.client.plugins.websocket.*
 import io.ktor.client.plugins.websocket.WebSockets
-import io.ktor.client.plugins.websocket.webSocket
-import io.ktor.server.testing.testApplication
-import io.ktor.server.websocket.DefaultWebSocketServerSession
-import io.ktor.websocket.Frame
-import io.ktor.websocket.readText
+import io.ktor.server.testing.*
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class MovementSocketTest {
 

@@ -95,14 +95,11 @@ private suspend fun DefaultWebSocketServerSession.handleIncomingFrames(
  * @param player newly connected player.
  */
 internal suspend fun DefaultWebSocketServerSession.sendInitialState(jsonCodec: Json, player: Player) {
-    val initPlayerMessage =
-        jsonCodec.encodeToString<OutgoingMessage>(InitPlayerMessage(player))
-    val initPlayersMessage =
-        jsonCodec.encodeToString<OutgoingMessage>(
-            InitPlayersMessage(players = PlayerRepository.getPlayers())
-        )
-    val initDotsMessage =
-        jsonCodec.encodeToString<OutgoingMessage>(InitDotsMessage(dots = Dots.allDots))
+    val initPlayerMessage = jsonCodec.encodeToString<OutgoingMessage>(InitPlayerMessage(player))
+    val initPlayersMessage = jsonCodec.encodeToString<OutgoingMessage>(
+        InitPlayersMessage(players = PlayerRepository.getPlayers())
+    )
+    val initDotsMessage = jsonCodec.encodeToString<OutgoingMessage>(InitDotsMessage(dots = Dots.allDots))
     send(Frame.Text(initPlayerMessage))
     send(Frame.Text(initPlayersMessage))
     send(Frame.Text(initDotsMessage))
@@ -214,10 +211,9 @@ private fun updateDotsForPlayer(player: Player): List<Dot> {
  * @param jsonCodec configured JSON serializer.
  */
 internal suspend fun broadcastPlayers(jsonCodec: Json) {
-    val updatePlayersMessage =
-        jsonCodec.encodeToString<OutgoingMessage>(
-            UpdatePlayersMessage(players = PlayerRepository.getPlayers())
-        )
+    val updatePlayersMessage = jsonCodec.encodeToString<OutgoingMessage>(
+        UpdatePlayersMessage(players = PlayerRepository.getPlayers())
+    )
     for (session in SessionRegistry.getSessions()) {
         session.send(Frame.Text(updatePlayersMessage))
     }
@@ -230,8 +226,7 @@ internal suspend fun broadcastPlayers(jsonCodec: Json) {
  * @param updatedDots dots that changed since last tick.
  */
 internal suspend fun broadcastDots(jsonCodec: Json, updatedDots: List<Dot>) {
-    val updateDotsMessage =
-        jsonCodec.encodeToString<OutgoingMessage>(UpdateDotsMessage(dots = updatedDots))
+    val updateDotsMessage = jsonCodec.encodeToString<OutgoingMessage>(UpdateDotsMessage(dots = updatedDots))
     for (session in SessionRegistry.getSessions()) {
         session.send(Frame.Text(updateDotsMessage))
     }
