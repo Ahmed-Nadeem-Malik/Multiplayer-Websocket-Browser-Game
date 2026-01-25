@@ -1,6 +1,5 @@
 package com.example.model
 
-import kotlinx.serialization.Serializable
 
 /**
  * Manages the server-side dot collection and refresh schedule.
@@ -58,21 +57,3 @@ object Dots {
         return dot
     }
 }
-
-/**
- * Server message that initializes dot state for a client.
- *
- * @property type message discriminator.
- * @property dots initial dot list.
- */
-@Serializable
-data class InitDotsMessage(val type: String = "InitDots", val dots: List<Dot> = Dots.allDots)
-
-/**
- * Server message that broadcasts updated dots.
- *
- * @property type message discriminator.
- * @property dots updated dot list.
- */
-@Serializable
-data class UpdateDotsMessage(val type: String = "UpdateDots", val dots: List<Dot>)

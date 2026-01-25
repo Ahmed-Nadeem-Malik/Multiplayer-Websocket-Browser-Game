@@ -93,14 +93,14 @@ private suspend fun removeEliminatedBots(bots: MutableList<BotState>, eliminated
 
 private fun randomMovementInput(playerId: String): MovementInput {
     val options = listOf(
-        MovementInput(type = "bot", id = playerId, w = true, a = false, s = false, d = false),
-        MovementInput(type = "bot", id = playerId, w = false, a = true, s = false, d = false),
-        MovementInput(type = "bot", id = playerId, w = false, a = false, s = true, d = false),
-        MovementInput(type = "bot", id = playerId, w = false, a = false, s = false, d = true),
-        MovementInput(type = "bot", id = playerId, w = true, a = true, s = false, d = false),
-        MovementInput(type = "bot", id = playerId, w = true, a = false, s = false, d = true),
-        MovementInput(type = "bot", id = playerId, w = false, a = true, s = true, d = false),
-        MovementInput(type = "bot", id = playerId, w = false, a = false, s = true, d = true)
+        MovementInput(id = playerId, w = true, a = false, s = false, d = false),
+        MovementInput(id = playerId, w = false, a = true, s = false, d = false),
+        MovementInput(id = playerId, w = false, a = false, s = true, d = false),
+        MovementInput(id = playerId, w = false, a = false, s = false, d = true),
+        MovementInput(id = playerId, w = true, a = true, s = false, d = false),
+        MovementInput(id = playerId, w = true, a = false, s = false, d = true),
+        MovementInput(id = playerId, w = false, a = true, s = true, d = false),
+        MovementInput(id = playerId, w = false, a = false, s = true, d = true)
     )
 
     return options.random()
