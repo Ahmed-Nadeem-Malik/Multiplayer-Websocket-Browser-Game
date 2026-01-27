@@ -6,7 +6,6 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
@@ -38,14 +37,13 @@ fun Application.configureSockets() {
     routing {
         webSocket("/movement") {
             val player = Player()
-            val sessionScope = CoroutineScope(coroutineContext)
             PlayerRepository.addPlayer(player)
             SessionRegistry.addSession(player.id, this)
 
             sendInitialState(jsonCodec, player)
 
             try {
-                handleIncomingFrames(jsonCodec, application, player, sessionScope)
+                handleIncomingFrames(jsonCodec, application, player)
             } catch (exception: Throwable) {
                 application.log.warn("Unknown error", exception)
             } finally {
@@ -63,10 +61,9 @@ fun Application.configureSockets() {
  * @param jsonCodec configured JSON serializer.
  * @param application application logger owner.
  * @param player current player for the session.
- * @param sessionScope scope for delayed session closes.
  */
 private suspend fun DefaultWebSocketServerSession.handleIncomingFrames(
-    jsonCodec: Json, application: Application, player: Player, sessionScope: CoroutineScope
+    jsonCodec: Json, application: Application, player: Player
 ) {
     for (frame in incoming) {
         if (frame !is Frame.Text) continue
@@ -80,7 +77,7 @@ private suspend fun DefaultWebSocketServerSession.handleIncomingFrames(
             }
 
             is MovementInput -> {
-                val eliminated = handleMovementInput(jsonCodec, message, player, sessionScope)
+                val eliminated = handleMovementInput(jsonCodec, message, player)
                 if (eliminated) break
             }
         }
@@ -145,11 +142,10 @@ internal fun applyPlayerConfig(player: Player, config: PlayerConfigInput) {
  * @param jsonCodec configured JSON serializer.
  * @param movementInput decoded movement input.
  * @param player player issuing the movement.
- * @param sessionScope scope for delayed session closes.
  * @return true when the current player was eliminated.
  */
-private suspend fun handleMovementInput(
-    jsonCodec: Json, movementInput: MovementInput, player: Player, sessionScope: CoroutineScope
+private suspend fun DefaultWebSocketServerSession.handleMovementInput(
+    jsonCodec: Json, movementInput: MovementInput, player: Player
 ): Boolean {
     player.update(movementInput)
 
@@ -174,7 +170,7 @@ private suspend fun handleMovementInput(
             SessionRegistry.getSession(eliminatedId)?.send(Frame.Text(eliminatedMessage))
         }
 
-        sessionScope.launch {
+        launch {
             delay(ELIMINATION_DELAY_MS)
             for (eliminatedId in eliminatedPlayers) {
                 SessionRegistry.getSession(eliminatedId)?.close(
