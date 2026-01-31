@@ -15,7 +15,16 @@ export type CameraPosition = {
 };
 
 export function isMovementKey(key: string): key is keyof MovementState {
-    return key === "w" || key === "a" || key === "s" || key === "d";
+    return (
+        key === "w" ||
+        key === "a" ||
+        key === "s" ||
+        key === "d" ||
+        key === "arrowup" ||
+        key === "arrowleft" ||
+        key === "arrowdown" ||
+        key === "arrowright"
+    );
 }
 
 export function startRenderLoop(
@@ -27,17 +36,31 @@ export function startRenderLoop(
     getCameraPosition: () => CameraPosition,
     getLocalPlayerAlpha: () => number,
 ): void {
+    const baseRadius = 40;
+    const minZoom = 0.4;
+    const maxZoom = 1;
+    let currentZoom = 1;
+
     const loop = (): void => {
         renderContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
         const cameraTarget = getCameraPosition();
-        const cameraX = cameraTarget.x - gameCanvas.width / 2;
-        const cameraY = cameraTarget.y - gameCanvas.height / 2;
+        const viewportWidth = gameCanvas.clientWidth || gameCanvas.width;
+        const viewportHeight = gameCanvas.clientHeight || gameCanvas.height;
+        const localRadius = Math.max(1, localPlayer.getRadius());
+        const rawZoom = baseRadius / Math.max(localRadius, baseRadius);
+        const targetZoom = clamp(Math.sqrt(rawZoom), minZoom, maxZoom);
+        currentZoom += (targetZoom - currentZoom) * 0.08;
+        const worldViewportWidth = viewportWidth / currentZoom;
+        const worldViewportHeight = viewportHeight / currentZoom;
+        const cameraX = cameraTarget.x - worldViewportWidth / 2;
+        const cameraY = cameraTarget.y - worldViewportHeight / 2;
 
         renderContext.save();
+        renderContext.scale(currentZoom, currentZoom);
         renderContext.translate(-cameraX, -cameraY);
 
-        drawGrid(renderContext, cameraX, cameraY, gameCanvas.width, gameCanvas.height);
+        drawGrid(renderContext, cameraX, cameraY, worldViewportWidth, worldViewportHeight);
         drawWorldBorder(renderContext);
         drawDots(dotRegistry);
         drawPlayers(playerRegistry, localPlayer, getLocalPlayerAlpha());
@@ -47,6 +70,10 @@ export function startRenderLoop(
     };
 
     requestAnimationFrame(loop);
+}
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
 }
 
 function drawPlayers(playerRegistry: Players, localPlayer: Player, localPlayerAlpha: number): void {

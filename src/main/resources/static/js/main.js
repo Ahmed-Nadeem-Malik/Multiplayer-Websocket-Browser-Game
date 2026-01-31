@@ -1,4 +1,4 @@
-import { connectWebSocket, dotRegistry, localPlayer, playerRegistry, sendInputState, setDisconnectHandler, setEliminationHandler, setReconnectEnabled, } from "./websocket.js";
+import { connectWebSocket, dotRegistry, isSocketOpen, localPlayer, playerRegistry, requestReset, sendInputState, setDisconnectHandler, setEliminationHandler, setGameOverHandler, setReconnectEnabled, } from "./websocket.js";
 import { canvas, context, movementState } from "./game.js";
 import { isMovementKey, startRenderLoop } from "./utils.js";
 const DEFAULT_NAME = "undefined";
@@ -13,6 +13,8 @@ const gameState = {
     active: false, renderLoopStarted: false, inputIntervalId: null, elimination: {
         inProgress: false, startTime: null, frozenCameraPosition: null,
     },
+    gameOver: false,
+    pendingMenuTitle: null,
 };
 let selectedColour = colorButtons[0]?.dataset.colour ?? "#B03030";
 const initColourPicker = () => {
@@ -36,14 +38,35 @@ const resetMovementState = () => {
     movementState.d = false;
 };
 const registerMovementHandlers = () => {
+    const normalizeMovementKey = (rawKey) => {
+        switch (rawKey) {
+            case "w":
+            case "arrowup":
+                return "w";
+            case "a":
+            case "arrowleft":
+                return "a";
+            case "s":
+            case "arrowdown":
+                return "s";
+            case "d":
+            case "arrowright":
+                return "d";
+            default:
+                return null;
+        }
+    };
     document.addEventListener("keydown", (event) => {
         if (!gameState.active)
             return;
         const key = event.key.toLowerCase();
         if (!isMovementKey(key))
             return;
-        if (!movementState[key]) {
-            movementState[key] = true;
+        const normalizedKey = normalizeMovementKey(key);
+        if (!normalizedKey)
+            return;
+        if (!movementState[normalizedKey]) {
+            movementState[normalizedKey] = true;
             sendInputState();
         }
     });
@@ -53,15 +76,24 @@ const registerMovementHandlers = () => {
         const key = event.key.toLowerCase();
         if (!isMovementKey(key))
             return;
-        if (movementState[key]) {
-            movementState[key] = false;
+        const normalizedKey = normalizeMovementKey(key);
+        if (!normalizedKey)
+            return;
+        if (movementState[normalizedKey]) {
+            movementState[normalizedKey] = false;
             sendInputState();
         }
     });
 };
 const resizeCanvas = () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const pixelRatio = window.devicePixelRatio || 1;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    canvas.width = Math.floor(width * pixelRatio);
+    canvas.height = Math.floor(height * pixelRatio);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 };
 const getPlayerConfig = () => {
     const rawName = nameInput?.value.trim() ?? "";
@@ -118,13 +150,23 @@ const stopInputLoop = () => {
 };
 const startGame = () => {
     const config = getPlayerConfig();
+    const socketOpen = isSocketOpen();
     gameState.elimination.inProgress = false;
     gameState.elimination.startTime = null;
     gameState.elimination.frozenCameraPosition = null;
+    gameState.gameOver = false;
+    gameState.pendingMenuTitle = null;
+    playerRegistry.clear();
+    dotRegistry.clear();
+    if (!socketOpen) {
+        localPlayer.reset();
+    }
     gameState.active = true;
     setReconnectEnabled(true);
     hideMenu();
-    connectWebSocket(config);
+    if (!socketOpen) {
+        connectWebSocket(config);
+    }
     startInputLoop();
     startRenderLoopOnce();
 };
@@ -144,8 +186,27 @@ const handleElimination = () => {
     window.setTimeout(() => {
         gameState.elimination.inProgress = false;
         gameState.elimination.startTime = null;
-        setMenuState("Play Again", "Play Again");
+        const title = gameState.pendingMenuTitle ?? "Play Again";
+        setMenuState(title, "Play Again");
     }, ELIMINATION_FREEZE_MS);
+};
+const handleGameOver = (result) => {
+    if (gameState.gameOver) {
+        return;
+    }
+    const title = result === "win" ? "You are the winner" : "You lost";
+    gameState.gameOver = true;
+    gameState.pendingMenuTitle = title;
+    gameState.active = false;
+    resetMovementState();
+    stopInputLoop();
+    setReconnectEnabled(false);
+    const config = getPlayerConfig();
+    requestReset(config);
+    if (gameState.elimination.inProgress) {
+        return;
+    }
+    setMenuState(title, "Play Again");
 };
 const handleDisconnect = () => {
     if (gameState.elimination.inProgress) {
@@ -164,5 +225,6 @@ initColourPicker();
 registerMovementHandlers();
 setDisconnectHandler(handleDisconnect);
 setEliminationHandler(handleElimination);
+setGameOverHandler(handleGameOver);
 window.addEventListener("resize", resizeCanvas);
 startButton?.addEventListener("click", startGame);

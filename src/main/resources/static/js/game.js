@@ -15,6 +15,14 @@ export class Player {
         this.radius = 0;
         this.colour = "#1F51FF";
     }
+    reset() {
+        this.id = undefined;
+        this.name = "undefined";
+        this.x = 500;
+        this.y = 500;
+        this.radius = 0;
+        this.colour = "#1F51FF";
+    }
     applySnapshot(snapshot) {
         Object.assign(this, snapshot);
     }
@@ -26,6 +34,9 @@ export class Player {
     }
     getY() {
         return this.y;
+    }
+    getRadius() {
+        return this.radius;
     }
     draw(alphaMultiplier = 1) {
         const clampedAlpha = Math.max(0, Math.min(1, alphaMultiplier));
@@ -70,6 +81,9 @@ export class Players {
             nextPlayers[id] = player;
         }
         this.playersById = nextPlayers;
+    }
+    clear() {
+        this.playersById = {};
     }
 }
 export class Dot {
@@ -118,5 +132,8 @@ export class Dots {
             existing.applySnapshot(dotSnapshot);
             this.dotsById[dotSnapshot.id] = existing;
         }
+    }
+    clear() {
+        this.dotsById = {};
     }
 }

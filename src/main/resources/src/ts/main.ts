@@ -1,12 +1,15 @@
 import {
     connectWebSocket,
     dotRegistry,
+    isSocketOpen,
     localPlayer,
     PlayerConfig,
     playerRegistry,
+    requestReset,
     sendInputState,
     setDisconnectHandler,
     setEliminationHandler,
+    setGameOverHandler,
     setReconnectEnabled,
 } from "./websocket.js";
 import {canvas, context, movementState} from "./game.js";
@@ -30,6 +33,8 @@ const gameState = {
     active: false, renderLoopStarted: false, inputIntervalId: null as number | null, elimination: {
         inProgress: false, startTime: null, frozenCameraPosition: null,
     } as EliminationState,
+    gameOver: false,
+    pendingMenuTitle: null as string | null,
 };
 
 let selectedColour = colorButtons[0]?.dataset.colour ?? "#B03030";
@@ -60,13 +65,35 @@ const resetMovementState = (): void => {
 };
 
 const registerMovementHandlers = (): void => {
+    const normalizeMovementKey = (rawKey: string): keyof typeof movementState | null => {
+        switch (rawKey) {
+            case "w":
+            case "arrowup":
+                return "w";
+            case "a":
+            case "arrowleft":
+                return "a";
+            case "s":
+            case "arrowdown":
+                return "s";
+            case "d":
+            case "arrowright":
+                return "d";
+            default:
+                return null;
+        }
+    };
+
     document.addEventListener("keydown", (event: KeyboardEvent) => {
         if (!gameState.active) return;
         const key = event.key.toLowerCase();
         if (!isMovementKey(key)) return;
 
-        if (!movementState[key]) {
-            movementState[key] = true;
+        const normalizedKey = normalizeMovementKey(key);
+        if (!normalizedKey) return;
+
+        if (!movementState[normalizedKey]) {
+            movementState[normalizedKey] = true;
             sendInputState();
         }
     });
@@ -76,16 +103,26 @@ const registerMovementHandlers = (): void => {
         const key = event.key.toLowerCase();
         if (!isMovementKey(key)) return;
 
-        if (movementState[key]) {
-            movementState[key] = false;
+        const normalizedKey = normalizeMovementKey(key);
+        if (!normalizedKey) return;
+
+        if (movementState[normalizedKey]) {
+            movementState[normalizedKey] = false;
             sendInputState();
         }
     });
 };
 
 const resizeCanvas = (): void => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const pixelRatio = window.devicePixelRatio || 1;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    canvas.width = Math.floor(width * pixelRatio);
+    canvas.height = Math.floor(height * pixelRatio);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 };
 
 const getPlayerConfig = (): PlayerConfig => {
@@ -157,14 +194,24 @@ const stopInputLoop = (): void => {
 
 const startGame = (): void => {
     const config = getPlayerConfig();
+    const socketOpen = isSocketOpen();
 
     gameState.elimination.inProgress = false;
     gameState.elimination.startTime = null;
     gameState.elimination.frozenCameraPosition = null;
+    gameState.gameOver = false;
+    gameState.pendingMenuTitle = null;
+    playerRegistry.clear();
+    dotRegistry.clear();
+    if (!socketOpen) {
+        localPlayer.reset();
+    }
     gameState.active = true;
     setReconnectEnabled(true);
     hideMenu();
-    connectWebSocket(config);
+    if (!socketOpen) {
+        connectWebSocket(config);
+    }
     startInputLoop();
     startRenderLoopOnce();
 };
@@ -187,8 +234,32 @@ const handleElimination = (): void => {
     window.setTimeout(() => {
         gameState.elimination.inProgress = false;
         gameState.elimination.startTime = null;
-        setMenuState("Play Again", "Play Again");
+        const title = gameState.pendingMenuTitle ?? "Play Again";
+        setMenuState(title, "Play Again");
     }, ELIMINATION_FREEZE_MS);
+};
+
+const handleGameOver = (result: "win" | "loss"): void => {
+    if (gameState.gameOver) {
+        return;
+    }
+
+    const title = result === "win" ? "You are the winner" : "You lost";
+    gameState.gameOver = true;
+    gameState.pendingMenuTitle = title;
+    gameState.active = false;
+    resetMovementState();
+    stopInputLoop();
+    setReconnectEnabled(false);
+
+    const config = getPlayerConfig();
+    requestReset(config);
+
+    if (gameState.elimination.inProgress) {
+        return;
+    }
+
+    setMenuState(title, "Play Again");
 };
 
 const handleDisconnect = (): void => {
@@ -211,6 +282,7 @@ initColourPicker();
 registerMovementHandlers();
 setDisconnectHandler(handleDisconnect);
 setEliminationHandler(handleElimination);
+setGameOverHandler(handleGameOver);
 window.addEventListener("resize", resizeCanvas);
 
 startButton?.addEventListener("click", startGame);

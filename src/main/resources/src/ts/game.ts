@@ -44,6 +44,15 @@ export class Player {
     private radius: number = 0;
     private colour: string = "#1F51FF";
 
+    public reset(): void {
+        this.id = undefined;
+        this.name = "undefined";
+        this.x = 500;
+        this.y = 500;
+        this.radius = 0;
+        this.colour = "#1F51FF";
+    }
+
     public applySnapshot(snapshot: PlayerSnapshot): void {
         Object.assign(this, snapshot);
     }
@@ -58,6 +67,10 @@ export class Player {
 
     public getY(): number {
         return this.y;
+    }
+
+    public getRadius(): number {
+        return this.radius;
     }
 
     public draw(alphaMultiplier: number = 1): void {
@@ -112,6 +125,10 @@ export class Players {
 
         this.playersById = nextPlayers;
     }
+
+    public clear(): void {
+        this.playersById = {};
+    }
 }
 
 export class Dot {
@@ -165,5 +182,9 @@ export class Dots {
             existing.applySnapshot(dotSnapshot);
             this.dotsById[dotSnapshot.id] = existing;
         }
+    }
+
+    public clear(): void {
+        this.dotsById = {};
     }
 }

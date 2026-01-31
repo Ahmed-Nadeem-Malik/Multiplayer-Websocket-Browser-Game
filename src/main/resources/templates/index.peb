@@ -19,6 +19,7 @@
                         style="background-color: {{ colour }};"></button>
                 {% endfor %}
         </div>
+        <div class="menu-hint">Move with WASD or arrow keys.</div>
         <button id="startButton" class="menu-button" type="button">Start</button>
     </div>
 </div>

@@ -7,6 +7,9 @@ let playerConfig: PlayerConfig | null = null;
 let reconnectEnabled = true;
 let disconnectHandler: (() => void) | null = null;
 let eliminationHandler: (() => void) | null = null;
+let gameOverHandler: ((result: "win" | "loss") => void) | null = null;
+let gameOverEmitted = false;
+let maxPlayersSeen = 0;
 
 export const localPlayer = new Player();
 
@@ -31,8 +34,33 @@ export const setEliminationHandler = (handler: (() => void) | null): void => {
     eliminationHandler = handler;
 };
 
+export const setGameOverHandler = (handler: ((result: "win" | "loss") => void) | null): void => {
+    gameOverHandler = handler;
+};
+
+export const requestReset = (config: PlayerConfig): boolean => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        return false;
+    }
+
+    playerConfig = config;
+    gameOverEmitted = false;
+    maxPlayersSeen = 0;
+    socket.send(
+        JSON.stringify({
+            type: "Reset",
+            ...playerConfig,
+        }),
+    );
+    return true;
+};
+
 const isSocketActive = (): boolean => {
     return !!socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING);
+};
+
+export const isSocketOpen = (): boolean => {
+    return !!socket && socket.readyState === WebSocket.OPEN;
 };
 
 const sendConfig = (): void => {
@@ -63,6 +91,37 @@ const updateLocalPlayer = (players: Record<string, PlayerSnapshot>): void => {
 const handlePlayersSnapshot = (players: Record<string, PlayerSnapshot>): void => {
     playerRegistry.applySnapshot(players);
     updateLocalPlayer(players);
+    evaluateGameOver(players);
+};
+
+const evaluateGameOver = (players: Record<string, PlayerSnapshot>): void => {
+    if (gameOverEmitted) {
+        return;
+    }
+
+    const localId = localPlayer.getId();
+    if (!localId) {
+        return;
+    }
+
+    const playerIds = Object.keys(players);
+    maxPlayersSeen = Math.max(maxPlayersSeen, playerIds.length);
+    if (maxPlayersSeen < 2) {
+        return;
+    }
+    if (playerIds.length !== 1) {
+        return;
+    }
+
+    const remainingId = playerIds[0];
+    if (remainingId === localId) {
+        gameOverEmitted = true;
+        gameOverHandler?.("win");
+        return;
+    }
+
+    gameOverEmitted = true;
+    gameOverHandler?.("loss");
 };
 
 const handleServerMessage = (message: ServerMessage): void => {
@@ -84,7 +143,7 @@ const handleServerMessage = (message: ServerMessage): void => {
             break;
         case "Eliminated": {
             const localId = localPlayer.getId();
-            if (localId && message.playerId === localId && !playerRegistry.getAll()[localId]) {
+            if (localId && message.playerId === localId) {
                 eliminationHandler?.();
             }
             break;
@@ -102,6 +161,8 @@ const scheduleReconnect = (): void => {
 export function connectWebSocket(config?: PlayerConfig): void {
     if (config) {
         playerConfig = config;
+        gameOverEmitted = false;
+        maxPlayersSeen = 0;
     }
 
     if (!playerConfig || isSocketActive()) {
