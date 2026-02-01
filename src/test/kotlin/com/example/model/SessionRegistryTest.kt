@@ -20,6 +20,11 @@ class SessionRegistryTest {
         assertEquals(0, SessionRegistry.getSessions().count { it == session })
     }
 
+    @Test
+    fun getSessionReturnsSession() = withSession("session-3") { session ->
+        assertEquals(session, SessionRegistry.getSession("session-3"))
+    }
+
     private inline fun withSession(id: String, block: (DefaultWebSocketServerSession) -> Unit) {
         val session = mockk<DefaultWebSocketServerSession>(relaxed = true)
         SessionRegistry.addSession(id, session)

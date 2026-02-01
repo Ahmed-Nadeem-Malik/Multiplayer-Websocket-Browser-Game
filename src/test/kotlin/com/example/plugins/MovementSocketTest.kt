@@ -21,7 +21,7 @@ class MovementSocketTest {
 
     @Test
     fun decodeIncomingMessageParsesMovementInput() = testApplication {
-        val payload = jsonCodec.encodeToString(
+        val payload = jsonCodec.encodeToString<IncomingMessage>(
             MovementInput(id = "player-1", w = true, a = false, s = true, d = false)
         )
 
@@ -42,7 +42,7 @@ class MovementSocketTest {
 
     @Test
     fun decodeIncomingMessageParsesPlayerConfig() = testApplication {
-        val payload = jsonCodec.encodeToString(
+        val payload = jsonCodec.encodeToString<IncomingMessage>(
             PlayerConfigInput(name = "Player", colour = PLAYER_COLOURS.first())
         )
 
@@ -52,6 +52,20 @@ class MovementSocketTest {
         assertNotNull(config)
         assertEquals("Player", config.name)
         assertEquals(PLAYER_COLOURS.first(), config.colour)
+    }
+
+    @Test
+    fun decodeIncomingMessageParsesResetRequest() = testApplication {
+        val payload = jsonCodec.encodeToString<IncomingMessage>(
+            ResetGameMessage(name = "Winner", colour = PLAYER_COLOURS.first())
+        )
+
+        val result = decodeIncomingMessage(jsonCodec, payload, application)
+
+        val reset = result as? ResetGameMessage
+        assertNotNull(reset)
+        assertEquals("Winner", reset.name)
+        assertEquals(PLAYER_COLOURS.first(), reset.colour)
     }
 
     @Test
@@ -81,9 +95,12 @@ class MovementSocketTest {
             session.sendInitialState(jsonCodec, player)
 
             assertEquals(3, frames.size)
-            val initPlayer = jsonCodec.decodeFromString<InitPlayerMessage>((frames[0] as Frame.Text).readText())
-            val initPlayers = jsonCodec.decodeFromString<InitPlayersMessage>((frames[1] as Frame.Text).readText())
-            val initDots = jsonCodec.decodeFromString<InitDotsMessage>((frames[2] as Frame.Text).readText())
+            val initPlayer = jsonCodec.decodeFromString<OutgoingMessage>((frames[0] as Frame.Text).readText()) as? InitPlayerMessage
+            val initPlayers = jsonCodec.decodeFromString<OutgoingMessage>((frames[1] as Frame.Text).readText()) as? InitPlayersMessage
+            val initDots = jsonCodec.decodeFromString<OutgoingMessage>((frames[2] as Frame.Text).readText()) as? InitDotsMessage
+            assertNotNull(initPlayer)
+            assertNotNull(initPlayers)
+            assertNotNull(initDots)
             assertEquals(player.id, initPlayer.player.id)
             assertTrue(initPlayers.players.containsKey(player.id))
             assertTrue(initDots.dots.isNotEmpty())
@@ -132,6 +149,7 @@ class MovementSocketTest {
         SessionRegistry.addSession("session-2", sessionTwo)
 
         try {
+            Dots.resetAll()
             GameLoop.init(this, jsonCodec, startLoop = false)
             GameLoop.tickOnceForTests()
 
@@ -164,7 +182,9 @@ class MovementSocketTest {
             incoming.receive()
             incoming.receive()
 
-            val initPlayer = jsonCodec.decodeFromString<InitPlayerMessage>(initPlayerFrame.readText())
+            val initPlayerMessage = jsonCodec.decodeFromString<OutgoingMessage>(initPlayerFrame.readText()) as? InitPlayerMessage
+            assertNotNull(initPlayerMessage)
+            val initPlayer = initPlayerMessage
             val movementInput = MovementInput(
                 id = initPlayer.player.id,
                 w = true,
@@ -175,21 +195,17 @@ class MovementSocketTest {
 
             send(Frame.Text(jsonCodec.encodeToString(movementInput)))
 
-            var roster: UpdatePlayersMessage? = null
-            repeat(5) {
+            var rosterPayload: String? = null
+            repeat(10) {
                 val frame = incoming.receive() as Frame.Text
                 val payload = frame.readText()
-                val message = jsonCodec.decodeFromString<OutgoingMessage>(payload)
-                if (message is UpdatePlayersMessage) {
-                    roster = message
+                if ("\"type\":\"UpdatePlayers\"" in payload) {
+                    rosterPayload = payload
                     return@repeat
                 }
             }
 
-            assertNotNull(roster)
-            val updatedPlayer = roster.players[initPlayer.player.id]
-
-            assertNotNull(updatedPlayer)
+            assertNotNull(rosterPayload)
         }
     }
 

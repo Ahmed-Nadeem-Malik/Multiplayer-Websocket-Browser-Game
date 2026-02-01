@@ -27,6 +27,13 @@ class PlayerRepositoryTest {
         assertTrue(snapshot.containsKey(player.id))
     }
 
+    @Test
+    fun getPlayerReturnsPlayer() = withPlayer("player-4") { player ->
+        val fetched = PlayerRepository.getPlayer(player.id)
+
+        assertEquals(player, fetched)
+    }
+
     private inline fun withPlayer(id: String, block: (Player) -> Unit) {
         val player = Player(id = id)
         PlayerRepository.addPlayer(player)

@@ -37,6 +37,18 @@ class CollisionTest {
     }
 
     @Test
+    fun playerCollisionDetectsOverlapWhenLarger() {
+        val player = Player(radius = 40)
+        val other = Player(radius = 20)
+        player.x = 250
+        player.y = 250
+        other.x = 250
+        other.y = 250
+
+        assertTrue(playerCollision(player, other))
+    }
+
+    @Test
     fun handleDotCollisionsRespawnsDotAndGrowsPlayer() {
         val player = Player(radius = 30)
         val dot = Dots.allDots.first()

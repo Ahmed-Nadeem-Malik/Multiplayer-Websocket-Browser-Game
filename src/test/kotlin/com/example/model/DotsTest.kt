@@ -38,6 +38,15 @@ class DotsTest {
         assertTrue(Dots.allDots.any { it.id == dot.id })
     }
 
+    @Test
+    fun resetAllReinitializesDots() {
+        val dots = Dots.resetAll()
+
+        assertEquals(NUM_DOTS, dots.size)
+        assertTrue(dots.any { it.id == 0 })
+        assertTrue(dots.any { it.id == NUM_DOTS - 1 })
+    }
+
     private fun nextTickTime(): Long {
         var candidate = System.currentTimeMillis()
         val step = DEFAULT_DOT_INTERVAL_MS + 1
