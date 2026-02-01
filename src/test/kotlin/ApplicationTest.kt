@@ -13,7 +13,7 @@ class ApplicationTest {
     @Test
     fun healthEndpointReturnsOk() = testApplication {
         application {
-            module()
+            module(enableBots = false, startLoop = false)
         }
 
         val response = client.get("/health")
@@ -24,7 +24,7 @@ class ApplicationTest {
     @Test
     fun indexRendersTemplate() = testApplication {
         application {
-            module()
+            module(enableBots = false, startLoop = false)
         }
 
         val response = client.get("/")

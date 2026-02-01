@@ -31,4 +31,11 @@ object PlayerRepository {
     fun removePlayer(id: String) {
         playersById.remove(id)
     }
+
+    /**
+     * Clears all players from the repository.
+     */
+    fun clear() {
+        playersById.clear()
+    }
 }

@@ -3,9 +3,11 @@ const webSocketUrl = "ws://localhost:8080/movement";
 let socket = null;
 let playerConfig = null;
 let reconnectEnabled = true;
+let manualDisconnect = false;
 let disconnectHandler = null;
 let eliminationHandler = null;
 let gameOverHandler = null;
+let roundResetHandler = null;
 let gameOverEmitted = false;
 let maxPlayersSeen = 0;
 export const localPlayer = new Player();
@@ -22,6 +24,27 @@ export const setEliminationHandler = (handler) => {
 };
 export const setGameOverHandler = (handler) => {
     gameOverHandler = handler;
+};
+export const setRoundResetHandler = (handler) => {
+    roundResetHandler = handler;
+};
+export const disconnectWebSocket = () => {
+    if (!socket) {
+        return;
+    }
+    manualDisconnect = true;
+    socket.close();
+};
+export const reconnectWebSocket = (config) => {
+    playerConfig = config;
+    gameOverEmitted = false;
+    maxPlayersSeen = 0;
+    if (socket) {
+        manualDisconnect = true;
+        socket.close();
+        socket = null;
+    }
+    connectWebSocket();
 };
 export const requestReset = (config) => {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -115,6 +138,12 @@ const handleServerMessage = (message) => {
             }
             break;
         }
+        case "ResetRound": {
+            gameOverEmitted = false;
+            maxPlayersSeen = 0;
+            roundResetHandler?.();
+            break;
+        }
     }
 };
 const scheduleReconnect = () => {
@@ -144,6 +173,10 @@ export function connectWebSocket(config) {
     socket.addEventListener("close", () => {
         console.log("WebSocket closed - reconnecting...");
         socket = null;
+        if (manualDisconnect) {
+            manualDisconnect = false;
+            return;
+        }
         disconnectHandler?.();
         if (reconnectEnabled) {
             scheduleReconnect();

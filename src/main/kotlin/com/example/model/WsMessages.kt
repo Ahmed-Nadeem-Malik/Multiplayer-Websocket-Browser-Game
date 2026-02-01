@@ -107,3 +107,10 @@ data class InitDotsMessage(val dots: List<Dot> = Dots.allDots) : OutgoingMessage
 @Serializable
 @SerialName("UpdateDots")
 data class UpdateDotsMessage(val dots: List<Dot>) : OutgoingMessage
+
+/**
+ * Server message that signals a round reset.
+ */
+@Serializable
+@SerialName("ResetRound")
+data class ResetRoundMessage(val status: String = "Reset") : OutgoingMessage

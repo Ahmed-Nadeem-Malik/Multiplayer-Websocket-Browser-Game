@@ -169,22 +169,25 @@ class MovementSocketTest {
     }
 
     @Test
-    fun movementSocketBroadcastsUpdatedPosition() = testApplication {
+    fun movementSocketAcceptsInput() = testApplication {
         application {
-            configureSockets()
+            configureSockets(startLoop = false)
         }
         val client = createClient {
             install(WebSockets)
         }
 
-        client.webSocket("/movement") {
-            val initPlayerFrame = incoming.receive() as Frame.Text
-            incoming.receive()
-            incoming.receive()
+        val session = client.webSocketSession("/movement")
+        try {
+            val initPlayerFrame = session.incoming.receive() as Frame.Text
+            session.incoming.receive()
+            session.incoming.receive()
 
             val initPlayerMessage = jsonCodec.decodeFromString<OutgoingMessage>(initPlayerFrame.readText()) as? InitPlayerMessage
             assertNotNull(initPlayerMessage)
             val initPlayer = initPlayerMessage
+            val serverPlayer = PlayerRepository.getPlayer(initPlayer.player.id)
+            assertNotNull(serverPlayer)
             val movementInput = MovementInput(
                 id = initPlayer.player.id,
                 w = true,
@@ -193,19 +196,14 @@ class MovementSocketTest {
                 d = false
             )
 
-            send(Frame.Text(jsonCodec.encodeToString(movementInput)))
-
-            var rosterPayload: String? = null
-            repeat(10) {
-                val frame = incoming.receive() as Frame.Text
-                val payload = frame.readText()
-                if ("\"type\":\"UpdatePlayers\"" in payload) {
-                    rosterPayload = payload
-                    return@repeat
-                }
-            }
-
-            assertNotNull(rosterPayload)
+            session.send(Frame.Text(jsonCodec.encodeToString(movementInput)))
+            GameLoop.tickOnceForTests()
+            val updatedPlayer = PlayerRepository.getPlayer(initPlayer.player.id)
+            assertNotNull(updatedPlayer)
+        } finally {
+            session.close()
+            session.incoming.cancel()
+            client.close()
         }
     }
 

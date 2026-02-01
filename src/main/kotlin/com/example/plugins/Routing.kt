@@ -29,8 +29,10 @@ fun Application.configureRouting() {
         }
 
         get("/health") {
-            data class HealthStatusResponse(val status: String)
-            call.respond(HealthStatusResponse("Healthy"))
+            call.respondText(
+                text = "{\"status\":\"Healthy\"}",
+                contentType = ContentType.Application.Json
+            )
         }
 
     }

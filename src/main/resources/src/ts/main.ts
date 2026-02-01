@@ -1,15 +1,18 @@
 import {
     connectWebSocket,
+    disconnectWebSocket,
     dotRegistry,
     isSocketOpen,
     localPlayer,
     PlayerConfig,
     playerRegistry,
+    reconnectWebSocket,
     requestReset,
     sendInputState,
     setDisconnectHandler,
     setEliminationHandler,
     setGameOverHandler,
+    setRoundResetHandler,
     setReconnectEnabled,
 } from "./websocket.js";
 import {canvas, context, movementState} from "./game.js";
@@ -17,7 +20,7 @@ import {CameraPosition, isMovementKey, startRenderLoop} from "./utils.js";
 
 const DEFAULT_NAME = "undefined";
 const DISCONNECT_MENU_DELAY_MS = 200;
-const ELIMINATION_FREEZE_MS = 3000;
+const ELIMINATION_FREEZE_MS = 0;
 
 const menuOverlay = document.getElementById("menuOverlay") as HTMLElement | null;
 const menuTitle = document.getElementById("menuTitle") as HTMLElement | null;
@@ -36,6 +39,8 @@ const gameState = {
     gameOver: false,
     pendingMenuTitle: null as string | null,
 };
+
+let needsReconnect = false;
 
 let selectedColour = colorButtons[0]?.dataset.colour ?? "#B03030";
 
@@ -180,7 +185,7 @@ const startInputLoop = (): void => {
         return;
     }
 
-    gameState.inputIntervalId = window.setInterval(sendInputState, 1);
+    gameState.inputIntervalId = window.setInterval(sendInputState, 8);
 };
 
 const stopInputLoop = (): void => {
@@ -195,6 +200,7 @@ const stopInputLoop = (): void => {
 const startGame = (): void => {
     const config = getPlayerConfig();
     const socketOpen = isSocketOpen();
+    const shouldReconnect = needsReconnect || !socketOpen;
 
     gameState.elimination.inProgress = false;
     gameState.elimination.startTime = null;
@@ -203,14 +209,17 @@ const startGame = (): void => {
     gameState.pendingMenuTitle = null;
     playerRegistry.clear();
     dotRegistry.clear();
-    if (!socketOpen) {
+    if (shouldReconnect) {
         localPlayer.reset();
     }
     gameState.active = true;
-    setReconnectEnabled(true);
+    setReconnectEnabled(!shouldReconnect);
     hideMenu();
-    if (!socketOpen) {
-        connectWebSocket(config);
+    if (shouldReconnect) {
+        disconnectWebSocket();
+        setReconnectEnabled(true);
+        reconnectWebSocket(config);
+        needsReconnect = false;
     }
     startInputLoop();
     startRenderLoopOnce();
@@ -227,16 +236,15 @@ const handleElimination = (): void => {
         x: localPlayer.getX(), y: localPlayer.getY(),
     };
     gameState.active = false;
+    needsReconnect = true;
     resetMovementState();
     stopInputLoop();
     setReconnectEnabled(false);
 
-    window.setTimeout(() => {
-        gameState.elimination.inProgress = false;
-        gameState.elimination.startTime = null;
-        const title = gameState.pendingMenuTitle ?? "Play Again";
-        setMenuState(title, "Play Again");
-    }, ELIMINATION_FREEZE_MS);
+    gameState.elimination.inProgress = false;
+    gameState.elimination.startTime = null;
+    const title = gameState.pendingMenuTitle ?? "Play Again";
+    setMenuState(title, "Play Again");
 };
 
 const handleGameOver = (result: "win" | "loss"): void => {
@@ -248,18 +256,20 @@ const handleGameOver = (result: "win" | "loss"): void => {
     gameState.gameOver = true;
     gameState.pendingMenuTitle = title;
     gameState.active = false;
+    gameState.elimination.inProgress = false;
+    gameState.elimination.startTime = null;
+    gameState.elimination.frozenCameraPosition = null;
     resetMovementState();
     stopInputLoop();
     setReconnectEnabled(false);
 
-    const config = getPlayerConfig();
-    requestReset(config);
-
-    if (gameState.elimination.inProgress) {
-        return;
-    }
+    playerRegistry.clear();
+    dotRegistry.clear();
 
     setMenuState(title, "Play Again");
+
+    const config = getPlayerConfig();
+    requestReset(config);
 };
 
 const handleDisconnect = (): void => {
@@ -277,12 +287,29 @@ const handleDisconnect = (): void => {
     }, DISCONNECT_MENU_DELAY_MS);
 };
 
+const handleRoundReset = (): void => {
+    gameState.active = false;
+    gameState.elimination.inProgress = false;
+    gameState.elimination.startTime = null;
+    gameState.elimination.frozenCameraPosition = null;
+    resetMovementState();
+    stopInputLoop();
+    setReconnectEnabled(false);
+
+    playerRegistry.clear();
+    dotRegistry.clear();
+
+    const title = gameState.pendingMenuTitle ?? "Play Again";
+    setMenuState(title, "Play Again");
+};
+
 resizeCanvas();
 initColourPicker();
 registerMovementHandlers();
 setDisconnectHandler(handleDisconnect);
 setEliminationHandler(handleElimination);
 setGameOverHandler(handleGameOver);
+setRoundResetHandler(handleRoundReset);
 window.addEventListener("resize", resizeCanvas);
 
 startButton?.addEventListener("click", startGame);

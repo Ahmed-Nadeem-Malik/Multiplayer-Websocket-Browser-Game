@@ -37,8 +37,10 @@ internal suspend fun DefaultWebSocketServerSession.handleIncomingFrames(
                 player.resetForNewGame()
                 val resetDots = Dots.resetAll()
                 resetBots()
+                GameLoop.resetRoundTracking()
                 broadcastDots(jsonCodec, resetDots)
                 broadcastPlayers(jsonCodec)
+                broadcastResetRound(jsonCodec)
             }
 
             is MovementInput -> {
@@ -113,5 +115,12 @@ private suspend fun broadcastPlayers(jsonCodec: Json) {
     )
     for (session in SessionRegistry.getSessions()) {
         session.send(Frame.Text(updatePlayersMessage))
+    }
+}
+
+private suspend fun broadcastResetRound(jsonCodec: Json) {
+    val resetMessage = jsonCodec.encodeToString<OutgoingMessage>(ResetRoundMessage())
+    for (session in SessionRegistry.getSessions()) {
+        session.send(Frame.Text(resetMessage))
     }
 }

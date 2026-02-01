@@ -1,15 +1,18 @@
 package com.example.model
 
+import com.example.plugins.resetBots
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.json.Json
+import kotlin.math.max
 
 object GameLoop {
     private val inputChannel = Channel<MovementInput>(Channel.UNLIMITED)
     private lateinit var scope: CoroutineScope
     private var loopJob: Job? = null
     private lateinit var jsonCodec: Json
+    private var maxPlayersSeen = 0
 
     fun init(externalScope: CoroutineScope, jsonCodec: Json, startLoop: Boolean = true) {
         if (loopJob != null) return
@@ -24,6 +27,10 @@ object GameLoop {
 
     fun enqueueInput(input: MovementInput) {
         inputChannel.trySend(input)
+    }
+
+    fun resetRoundTracking() {
+        maxPlayersSeen = 0
     }
 
     private suspend fun runLoop() {
@@ -57,13 +64,52 @@ object GameLoop {
             }
         }
 
+        val passiveEliminated = handleAllPlayerCollisions(PlayerRepository.getPlayers().values)
+        if (passiveEliminated.isNotEmpty()) {
+            for (eliminatedId in passiveEliminated) {
+                PlayerRepository.removePlayer(eliminatedId)
+                eliminatedPlayers.add(eliminatedId)
+            }
+        }
+
         if (eliminatedPlayers.isNotEmpty()) {
             notifyEliminated(eliminatedPlayers)
+        }
+
+        val playerCount = PlayerRepository.getPlayers().size
+        maxPlayersSeen = max(maxPlayersSeen, playerCount)
+
+        if (shouldResetRound(playerCount)) {
+            resetRound()
+            return
         }
 
         broadcastPlayers()
         if (updatedDots.isNotEmpty()) {
             broadcastDots(updatedDots.values.toList())
+        }
+    }
+
+    private fun shouldResetRound(playerCount: Int): Boolean {
+        if (maxPlayersSeen < 2) {
+            return false
+        }
+
+        return playerCount == 1
+    }
+
+    private suspend fun resetRound() {
+        val resetDots = Dots.resetAll()
+        resetBots()
+        PlayerRepository.getPlayers().values.forEach { it.resetForNewGame() }
+        maxPlayersSeen = 0
+
+        broadcastPlayers()
+        broadcastDots(resetDots)
+
+        val resetMessage = jsonCodec.encodeToString<OutgoingMessage>(ResetRoundMessage())
+        for (session in SessionRegistry.getSessions()) {
+            session.send(Frame.Text(resetMessage))
         }
     }
 
@@ -74,14 +120,11 @@ object GameLoop {
             SessionRegistry.getSession(eliminatedId)?.send(Frame.Text(eliminatedMessage))
         }
 
-        scope.launch {
-            delay(ELIMINATION_DELAY_MS)
-            for (eliminatedId in eliminatedPlayers) {
-                SessionRegistry.getSession(eliminatedId)?.close(
-                    CloseReason(CloseReason.Codes.NORMAL, "Collided")
-                )
-                SessionRegistry.removeSession(eliminatedId)
-            }
+        for (eliminatedId in eliminatedPlayers) {
+            SessionRegistry.getSession(eliminatedId)?.close(
+                CloseReason(CloseReason.Codes.NORMAL, "Collided")
+            )
+            SessionRegistry.removeSession(eliminatedId)
         }
     }
 

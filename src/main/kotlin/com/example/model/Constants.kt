@@ -61,11 +61,6 @@ const val SERVER_TICK_RATE_HZ = 128
 const val SERVER_TICK_INTERVAL_MS = 1000L / SERVER_TICK_RATE_HZ
 
 /**
- * Delay before closing eliminated player sessions.
- */
-const val ELIMINATION_DELAY_MS = 3000L
-
-/**
  * Color palette used for dots.
  */
 val DOT_COLOURS = listOf(

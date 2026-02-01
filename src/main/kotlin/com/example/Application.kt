@@ -10,9 +10,11 @@ fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
 }
 
-fun Application.module() {
-    configureSockets()
-    configureBots()
+fun Application.module(enableBots: Boolean = true, startLoop: Boolean = true) {
+    configureSockets(startLoop = startLoop)
+    if (enableBots) {
+        configureBots()
+    }
     configureRouting()
     configureTemplating()
 }

@@ -5,9 +5,11 @@ const webSocketUrl = "ws://localhost:8080/movement";
 let socket: WebSocket | null = null;
 let playerConfig: PlayerConfig | null = null;
 let reconnectEnabled = true;
+let manualDisconnect = false;
 let disconnectHandler: (() => void) | null = null;
 let eliminationHandler: (() => void) | null = null;
 let gameOverHandler: ((result: "win" | "loss") => void) | null = null;
+let roundResetHandler: (() => void) | null = null;
 let gameOverEmitted = false;
 let maxPlayersSeen = 0;
 
@@ -36,6 +38,33 @@ export const setEliminationHandler = (handler: (() => void) | null): void => {
 
 export const setGameOverHandler = (handler: ((result: "win" | "loss") => void) | null): void => {
     gameOverHandler = handler;
+};
+
+export const setRoundResetHandler = (handler: (() => void) | null): void => {
+    roundResetHandler = handler;
+};
+
+export const disconnectWebSocket = (): void => {
+    if (!socket) {
+        return;
+    }
+
+    manualDisconnect = true;
+    socket.close();
+};
+
+export const reconnectWebSocket = (config: PlayerConfig): void => {
+    playerConfig = config;
+    gameOverEmitted = false;
+    maxPlayersSeen = 0;
+
+    if (socket) {
+        manualDisconnect = true;
+        socket.close();
+        socket = null;
+    }
+
+    connectWebSocket();
 };
 
 export const requestReset = (config: PlayerConfig): boolean => {
@@ -148,6 +177,12 @@ const handleServerMessage = (message: ServerMessage): void => {
             }
             break;
         }
+        case "ResetRound": {
+            gameOverEmitted = false;
+            maxPlayersSeen = 0;
+            roundResetHandler?.();
+            break;
+        }
     }
 };
 
@@ -184,6 +219,10 @@ export function connectWebSocket(config?: PlayerConfig): void {
     socket.addEventListener("close", () => {
         console.log("WebSocket closed - reconnecting...");
         socket = null;
+        if (manualDisconnect) {
+            manualDisconnect = false;
+            return;
+        }
         disconnectHandler?.();
 
         if (reconnectEnabled) {
@@ -230,4 +269,6 @@ type UpdateDotsMessage = { type: "UpdateDots"; dots: DotSnapshot[] };
 
 type EliminatedMessage = { type: "Eliminated"; playerId: string };
 
-type ServerMessage = InitMessage | UpdatePlayersMessage | UpdateDotsMessage | EliminatedMessage;
+type ResetRoundMessage = { type: "ResetRound"; status: string };
+
+type ServerMessage = InitMessage | UpdatePlayersMessage | UpdateDotsMessage | EliminatedMessage | ResetRoundMessage;

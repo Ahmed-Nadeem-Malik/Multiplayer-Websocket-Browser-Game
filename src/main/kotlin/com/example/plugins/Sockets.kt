@@ -11,13 +11,13 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * Configures the WebSocket endpoint used for player movement updates.
  */
-fun Application.configureSockets() {
+fun Application.configureSockets(startLoop: Boolean = true) {
     val jsonCodec = Json {
         encodeDefaults = true
         classDiscriminator = "type"
     }
 
-    GameLoop.init(this, jsonCodec)
+    GameLoop.init(this, jsonCodec, startLoop = startLoop)
 
     install(WebSockets) {
         pingPeriod = 15.seconds

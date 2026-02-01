@@ -111,3 +111,36 @@ fun handlePlayerCollisions(player: Player): Set<String> {
 
     return eliminated
 }
+
+/**
+ * Resolves collisions for all players and returns eliminated ids.
+ *
+ * @param players current players to evaluate.
+ * @return ids of players that were eliminated.
+ */
+fun handleAllPlayerCollisions(players: Collection<Player>): Set<String> {
+    val playerList = players.toList()
+    val eliminated = mutableSetOf<String>()
+
+    for (i in playerList.indices) {
+        val player = playerList[i]
+        if (player.id in eliminated) continue
+
+        for (j in i + 1 until playerList.size) {
+            val other = playerList[j]
+            if (other.id in eliminated || player.id in eliminated) continue
+            if (!playerCollision(player, other)) continue
+
+            val (larger, smaller) = if (player.radius >= other.radius) {
+                player to other
+            } else {
+                other to player
+            }
+            val gain = (smaller.radius * 0.2).toInt()
+            larger.radius += gain
+            eliminated.add(smaller.id)
+        }
+    }
+
+    return eliminated
+}

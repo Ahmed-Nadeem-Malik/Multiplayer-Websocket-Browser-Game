@@ -1,11 +1,23 @@
 package com.example.model
 
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PlayerRepositoryTest {
+
+    @BeforeTest
+    fun setup() {
+        PlayerRepository.clear()
+    }
+
+    @AfterTest
+    fun teardown() {
+        PlayerRepository.clear()
+    }
 
     @Test
     fun addPlayerStoresPlayer() = withPlayer("player-1") { player ->
