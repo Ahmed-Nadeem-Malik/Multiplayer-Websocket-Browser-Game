@@ -56,6 +56,16 @@ data class Player(
         }
     }
 
+    /**
+     * Resets player state for a new round while keeping identity.
+     */
+    fun resetForNewGame() {
+        radius = PLAYER_RADIUS
+        val (nx, ny) = randomXY()
+        x = nx
+        y = ny
+    }
+
     companion object {
         /**
          * Picks a random colour from the player palette.

@@ -14,6 +14,11 @@ object PlayerRepository {
     fun getPlayers(): Map<String, Player> = playersById.toMap()
 
     /**
+     * Returns the player for the given id, if present.
+     */
+    fun getPlayer(id: String): Player? = playersById[id]
+
+    /**
      * Adds or replaces a player in the repository.
      */
     fun addPlayer(player: Player) {

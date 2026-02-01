@@ -14,11 +14,11 @@ A real-time, Agar.io-style multiplayer arena built with Kotlin + Ktor. This proj
 
 ## Gameplay Overview
 
-Players spawn into a shared circular arena, consume dots to grow, and collide to eliminate smaller opponents. Movement is continuous, input-driven, and validated server-side. The server broadcasts authoritative updates to all sessions, while bots keep the world active even with low player counts.
+Players spawn into a shared circular arena, consume dots to grow, and collide to eliminate smaller opponents. Movement is continuous, input-driven, and validated server-side. The server broadcasts authoritative updates to all sessions, while bots keep the world active even with low player counts. When only one player remains, the round resets for a fresh start.
 
 ## Client Implementation (TypeScript)
 
-The browser client is written in TypeScript under `src/main/resources/src/ts/` with dedicated modules for the render loop and entity modeling (`game.ts`), WebSocket protocol handling and reconnect logic (`websocket.ts`), input/menu orchestration with a high-frequency input loop (`main.ts`), drawing utilities and grid/world rendering (`utils.ts`), and shared constants (`constants.ts`). These sources compile to the `static/js/` assets served by the Ktor app.
+The browser client is written in TypeScript under `src/main/resources/src/ts/` with dedicated modules for the render loop and entity modeling (`game.ts`), WebSocket protocol handling and reconnect logic (`websocket.ts`), input/menu orchestration with a high-frequency input loop (`main.ts`), drawing utilities and grid/world rendering (`utils.ts`), and shared constants (`constants.ts`). The renderer automatically zooms out as the local player grows so large avatars stay readable. These sources compile to the `static/js/` assets served by the Ktor app.
 
 ## Architecture at a Glance
 
@@ -56,6 +56,7 @@ The browser client is written in TypeScript under `src/main/resources/src/ts/` w
 | --- | --- |
 | `InitConfig` | Set player name and colour. |
 | `input` | Movement input with directional booleans. |
+| `Reset` | Request a new round when the player is the sole survivor. |
 
 ## Project Structure
 
@@ -70,13 +71,15 @@ websocketGame/
 │   │   │   ├── model/
 │   │   │   │   ├── Dot.kt                # Dot representation
 │   │   │   │   ├── Dots.kt               # Dot registry and tick updates
-│   │   │   │   ├── MovementInput.kt      # Movement input payload model
+│   │   │   │   ├── Collision.kt          # Collision handling logic
+│   │   │   │   ├── Constants.kt          # Server gameplay constants
+│   │   │   │   ├── Dot.kt                # Dot representation
+│   │   │   │   ├── Dots.kt               # Dot registry and tick updates
+│   │   │   │   ├── GameLoop.kt           # Server tick loop + broadcasts
+│   │   │   │   ├── Messages.kt           # WebSocket message models
 │   │   │   │   ├── Player.kt             # Player state and update logic
-│   │   │   │   ├── PlayerConfigInput.kt  # Player config payload model
 │   │   │   │   ├── PlayerRepository.kt   # In-memory player registry
-│   │   │   │   ├── SessionRegistry.kt    # WebSocket session registry
-│   │   │   │   ├── UpdateMessages.kt     # Broadcast message models
-│   │   │   │   └── collisions.kt         # Collision handling logic
+│   │   │   │   └── SessionRegistry.kt    # WebSocket session registry
 │   │   │   └── plugins/
 │   │   │       ├── Bots.kt               # Bot movement loop and updates
 │   │   │       ├── Routing.kt            # HTTP routing and status pages

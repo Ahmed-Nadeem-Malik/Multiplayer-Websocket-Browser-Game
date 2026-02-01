@@ -51,6 +51,21 @@ const val PLAYER_RADIUS = 24
 const val DOT_RADIUS = 8
 
 /**
+ * Server tick rate in Hz.
+ */
+const val SERVER_TICK_RATE_HZ = 128
+
+/**
+ * Server tick interval in milliseconds.
+ */
+const val SERVER_TICK_INTERVAL_MS = 1000L / SERVER_TICK_RATE_HZ
+
+/**
+ * Delay before closing eliminated player sessions.
+ */
+const val ELIMINATION_DELAY_MS = 3000L
+
+/**
  * Color palette used for dots.
  */
 val DOT_COLOURS = listOf(

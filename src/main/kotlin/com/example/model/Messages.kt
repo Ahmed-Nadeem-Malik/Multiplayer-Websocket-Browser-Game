@@ -37,6 +37,18 @@ data class PlayerConfigInput(
 ) : IncomingMessage
 
 /**
+ * Client payload that requests a fresh round.
+ *
+ * @property name updated player name.
+ * @property colour updated player colour.
+ */
+@Serializable
+@SerialName("Reset")
+data class ResetGameMessage(
+    val name: String, val colour: String
+) : IncomingMessage
+
+/**
  * Sealed outbound message types sent to clients.
  */
 @Serializable

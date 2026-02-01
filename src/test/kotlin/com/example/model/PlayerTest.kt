@@ -10,7 +10,7 @@ class PlayerTest {
         val player = Player()
         val startX = player.x
         val startY = player.y
-        val input = MovementInput(type = "input", id = player.id, w = true, a = false, s = false, d = true)
+        val input = MovementInput(id = player.id, w = true, a = false, s = false, d = true)
 
         player.update(input)
 
@@ -23,7 +23,7 @@ class PlayerTest {
         val player = Player()
         player.x = 7000
         player.y = 3000
-        val input = MovementInput(type = "input", id = player.id, w = false, a = false, s = false, d = false)
+        val input = MovementInput(id = player.id, w = false, a = false, s = false, d = false)
 
         player.update(input)
 

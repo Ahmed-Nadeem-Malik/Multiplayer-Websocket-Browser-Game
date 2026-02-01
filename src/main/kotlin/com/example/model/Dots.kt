@@ -56,4 +56,16 @@ object Dots {
         dotsById[id] = dot
         return dot
     }
+
+    /**
+     * Reinitializes all dots for a fresh round.
+     */
+    fun resetAll(): List<Dot> {
+        lastTick = 0L
+        dotsById.clear()
+        repeat(NUM_DOTS) { id ->
+            dotsById[id] = Dot(id = id)
+        }
+        return allDots
+    }
 }
