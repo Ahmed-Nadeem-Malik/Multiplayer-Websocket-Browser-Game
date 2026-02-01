@@ -58,7 +58,7 @@ object Dots {
     }
 
     /**
-     * Reinitializes all dots for a fresh round.
+     * Reinitialise all dots for a fresh round.
      */
     fun resetAll(): List<Dot> {
         lastTick = 0L

@@ -4,7 +4,6 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.json.Json
-import kotlin.coroutines.coroutineContext
 
 object GameLoop {
     private val inputChannel = Channel<MovementInput>(Channel.UNLIMITED)
@@ -28,7 +27,7 @@ object GameLoop {
     }
 
     private suspend fun runLoop() {
-        while (coroutineContext.isActive) {
+        while (currentCoroutineContext().isActive) {
             tick()
             delay(SERVER_TICK_INTERVAL_MS)
         }

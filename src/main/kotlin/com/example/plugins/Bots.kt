@@ -1,6 +1,9 @@
 package com.example.plugins
 
-import com.example.model.*
+import com.example.model.GameLoop
+import com.example.model.MovementInput
+import com.example.model.Player
+import com.example.model.PlayerRepository
 import io.ktor.server.application.*
 import kotlinx.coroutines.*
 import kotlin.math.max
@@ -22,8 +25,8 @@ private data class BotState(
 )
 
 private object BotManager {
-    private val bots: MutableList<BotState> = mutableListOf()
-    private val botLock = Any()
+    private val bots = mutableListOf<BotState>()
+    private val lock = Any()
     private var loopJob: Job? = null
 
     fun init() {
@@ -32,16 +35,9 @@ private object BotManager {
         loopJob = CoroutineScope(Dispatchers.Default).launch {
             while (isActive) {
                 delay(Random.nextLong(BOT_MIN_DELAY_MS, BOT_MAX_DELAY_MS + 1))
-
-                synchronized(botLock) {
-                    val iterator = bots.iterator()
-                    while (iterator.hasNext()) {
-                        val bot = iterator.next()
-                        if (PlayerRepository.getPlayer(bot.player.id) == null) {
-                            iterator.remove()
-                            continue
-                        }
-
+                synchronized(lock) {
+                    bots.removeAll { PlayerRepository.getPlayer(it.player.id) == null }
+                    bots.forEach { bot ->
                         applyBotStep(bot)
                         GameLoop.enqueueInput(bot.movementInput)
                     }
@@ -51,10 +47,10 @@ private object BotManager {
     }
 
     fun resetBots() {
-        val existingBots = PlayerRepository.getPlayers().keys.filter { it.startsWith(BOT_ID_PREFIX) }
-        existingBots.forEach(PlayerRepository::removePlayer)
+        PlayerRepository.getPlayers().keys.filter { it.startsWith(BOT_ID_PREFIX) }
+            .forEach(PlayerRepository::removePlayer)
 
-        synchronized(botLock) {
+        synchronized(lock) {
             bots.clear()
             bots.addAll(createBots())
             bots.forEach { bot -> PlayerRepository.addPlayer(bot.player) }
@@ -70,16 +66,11 @@ fun Application.configureBots() {
     BotManager.init()
 }
 
-private fun createBots(): MutableList<BotState> {
-    return MutableList(BOT_COUNT) { index ->
-        val player = Player(
-            id = "$BOT_ID_PREFIX${BOT_ID_START + index}",
-            name = "Bot"
-        )
-        BotState(
-            player = player, remainingSteps = 0, movementInput = randomMovementInput(player.id)
-        )
-    }
+private fun createBots(): List<BotState> = List(BOT_COUNT) { index ->
+    val player = Player(
+        id = "$BOT_ID_PREFIX${BOT_ID_START + index}", name = "Bot"
+    )
+    BotState(player = player, remainingSteps = 0, movementInput = randomMovementInput(player.id))
 }
 
 private fun applyBotStep(bot: BotState) {
@@ -92,7 +83,7 @@ private fun applyBotStep(bot: BotState) {
 }
 
 private fun randomMovementInput(playerId: String): MovementInput {
-    val options = listOf(
+    return listOf(
         MovementInput(id = playerId, w = true, a = false, s = false, d = false),
         MovementInput(id = playerId, w = false, a = true, s = false, d = false),
         MovementInput(id = playerId, w = false, a = false, s = true, d = false),
@@ -101,7 +92,5 @@ private fun randomMovementInput(playerId: String): MovementInput {
         MovementInput(id = playerId, w = true, a = false, s = false, d = true),
         MovementInput(id = playerId, w = false, a = true, s = true, d = false),
         MovementInput(id = playerId, w = false, a = false, s = true, d = true)
-    )
-
-    return options.random()
+    ).random()
 }
