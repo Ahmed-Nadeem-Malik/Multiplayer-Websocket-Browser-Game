@@ -14,6 +14,14 @@ export type CameraPosition = {
     y: number;
 };
 
+type CameraState = {
+    cameraX: number;
+    cameraY: number;
+    worldViewportWidth: number;
+    worldViewportHeight: number;
+    currentZoom: number;
+};
+
 export function isMovementKey(key: string): key is keyof MovementState {
     return (
         key === "w" ||
@@ -44,23 +52,28 @@ export function startRenderLoop(
     const loop = (): void => {
         renderContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
-        const cameraTarget = getCameraPosition();
-        const viewportWidth = gameCanvas.clientWidth || gameCanvas.width;
-        const viewportHeight = gameCanvas.clientHeight || gameCanvas.height;
-        const localRadius = Math.max(1, localPlayer.getRadius());
-        const rawZoom = baseRadius / Math.max(localRadius, baseRadius);
-        const targetZoom = clamp(Math.sqrt(rawZoom), minZoom, maxZoom);
-        currentZoom += (targetZoom - currentZoom) * 0.08;
-        const worldViewportWidth = viewportWidth / currentZoom;
-        const worldViewportHeight = viewportHeight / currentZoom;
-        const cameraX = cameraTarget.x - worldViewportWidth / 2;
-        const cameraY = cameraTarget.y - worldViewportHeight / 2;
+        const cameraState = getCameraState(
+            gameCanvas,
+            localPlayer,
+            getCameraPosition,
+            baseRadius,
+            minZoom,
+            maxZoom,
+            currentZoom,
+        );
+        currentZoom = cameraState.currentZoom;
 
         renderContext.save();
-        renderContext.scale(currentZoom, currentZoom);
-        renderContext.translate(-cameraX, -cameraY);
+        renderContext.scale(cameraState.currentZoom, cameraState.currentZoom);
+        renderContext.translate(-cameraState.cameraX, -cameraState.cameraY);
 
-        drawGrid(renderContext, cameraX, cameraY, worldViewportWidth, worldViewportHeight);
+        drawGrid(
+            renderContext,
+            cameraState.cameraX,
+            cameraState.cameraY,
+            cameraState.worldViewportWidth,
+            cameraState.worldViewportHeight,
+        );
         drawWorldBorder(renderContext);
         drawDots(dotRegistry);
         drawPlayers(playerRegistry, localPlayer, getLocalPlayerAlpha());
@@ -74,6 +87,36 @@ export function startRenderLoop(
 
 function clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, value));
+}
+
+function getCameraState(
+    gameCanvas: HTMLCanvasElement,
+    localPlayer: Player,
+    getCameraPosition: () => CameraPosition,
+    baseRadius: number,
+    minZoom: number,
+    maxZoom: number,
+    currentZoom: number,
+): CameraState {
+    const cameraTarget = getCameraPosition();
+    const viewportWidth = gameCanvas.clientWidth || gameCanvas.width;
+    const viewportHeight = gameCanvas.clientHeight || gameCanvas.height;
+    const localRadius = Math.max(1, localPlayer.getRadius());
+    const rawZoom = baseRadius / Math.max(localRadius, baseRadius);
+    const targetZoom = clamp(Math.sqrt(rawZoom), minZoom, maxZoom);
+    const nextZoom = currentZoom + (targetZoom - currentZoom) * 0.08;
+    const worldViewportWidth = viewportWidth / nextZoom;
+    const worldViewportHeight = viewportHeight / nextZoom;
+    const cameraX = cameraTarget.x - worldViewportWidth / 2;
+    const cameraY = cameraTarget.y - worldViewportHeight / 2;
+
+    return {
+        cameraX,
+        cameraY,
+        worldViewportWidth,
+        worldViewportHeight,
+        currentZoom: nextZoom,
+    };
 }
 
 function drawPlayers(playerRegistry: Players, localPlayer: Player, localPlayerAlpha: number): void {
