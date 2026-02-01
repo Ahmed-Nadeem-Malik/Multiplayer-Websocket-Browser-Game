@@ -11,8 +11,17 @@ import io.ktor.server.routing.*
 
 fun Application.configureRouting() {
     install(StatusPages) {
-        exception<Throwable> { call, cause ->
-            call.respondText(text = "500: $cause", status = HttpStatusCode.InternalServerError)
+        status(HttpStatusCode.NotFound) { call, status ->
+            call.respond(
+                status,
+                PebbleContent(
+                    "404.peb",
+                    mapOf(
+                        "title" to "Page Not Found",
+                        "message" to "Looks like you've used an invalid URL."
+                    )
+                )
+            )
         }
     }
     routing {
@@ -30,10 +39,10 @@ fun Application.configureRouting() {
 
         get("/health") {
             call.respondText(
-                text = "{\"status\":\"Healthy\"}",
-                contentType = ContentType.Application.Json
+                text = "{\"status\":\"Healthy\"}", contentType = ContentType.Application.Json
             )
         }
 
     }
 }
+
